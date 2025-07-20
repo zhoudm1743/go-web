@@ -12,7 +12,7 @@ import (
 // generateFrontend 生成前端代码
 func (g *Generator) generateFrontend() error {
 	// 创建前端目录
-	frontendDir := filepath.Join(g.RootPath, "front-end/src/views/setting", strings.ToLower(g.Config.StructName))
+	frontendDir := filepath.Join(g.RootPath, "front-end/src/views", strings.ToLower(g.Config.StructName))
 	if err := os.MkdirAll(frontendDir, 0755); err != nil {
 		return fmt.Errorf("创建前端目录失败: %w", err)
 	}
@@ -46,7 +46,7 @@ func (g *Generator) generateIndexPage(dir string) error {
 	const indexTemplate = `<template>
   <CommonWrapper>
     <template #title>
-      {{ title }}
+      {{ .Title }}
     </template>
 
     <template #buttons>
@@ -54,7 +54,7 @@ func (g *Generator) generateIndexPage(dir string) error {
         <template #icon>
           <icon-ic-round-plus />
         </template>
-        新增{{ description }}
+        新增{{ .Description }}
       </n-button>
     </template>
 
@@ -88,7 +88,7 @@ import { reactive, ref } from 'vue';
 import { useMessage } from 'naive-ui';
 import { CommonWrapper } from '@/components/common';
 import TableModal from './components/TableModal.vue';
-import { create{{structName}}, delete{{structName}}, get{{pluralName}}, update{{structName}} } from '@/service/api/{{apiFile}}';
+import { create{{.StructName}}, delete{{.StructName}}, get{{.PluralName}}, update{{.StructName}} } from '@/service/api/{{.ApiFile}}';
 
 // 表格设置
 const tableLoading = ref(false);
@@ -118,12 +118,12 @@ const modalMode = ref<'add' | 'edit'>('add');
 const message = useMessage();
 
 // 常量
-const title = '{{description}}管理';
-const description = '{{description}}';
+const title = '{{.Description}}管理';
+const description = '{{.Description}}';
 
 // 表格列
 const columns = [
-{{columnDefs}}
+{{.ColumnDefs}}
   {
     title: '操作',
     key: 'actions',
@@ -161,7 +161,7 @@ loadTableData();
 async function loadTableData() {
   try {
     tableLoading.value = true;
-    const res = await get{{pluralName}}({
+    const res = await get{{.PluralName}}({
       page: pagination.page,
       pageSize: pagination.pageSize
     });
@@ -190,14 +190,14 @@ function handlePageSizeChange(pageSize: number) {
 
 // 处理新增
 function handleAdd() {
-  modalTitle.value = '新增{{description}}';
+  modalTitle.value = '新增{{.Description}}';
   modalMode.value = 'add';
   modalRef.value.openModal();
 }
 
 // 处理编辑
 function handleEdit(row) {
-  modalTitle.value = '编辑{{description}}';
+  modalTitle.value = '编辑{{.Description}}';
   modalMode.value = 'edit';
   modalRef.value.openModal(row);
 }
@@ -205,7 +205,7 @@ function handleEdit(row) {
 // 处理删除
 async function handleDelete(row) {
   try {
-    await delete{{structName}}(row.id);
+    await delete{{.StructName}}(row.id);
     message.success('删除成功');
     loadTableData();
   } catch (error) {
@@ -219,10 +219,10 @@ async function handleModalSubmit(formData) {
     modalLoading.value = true;
     
     if (modalMode.value === 'add') {
-      await create{{structName}}(formData);
+      await create{{.StructName}}(formData);
       message.success('创建成功');
     } else {
-      await update{{structName}}(formData);
+      await update{{.StructName}}(formData);
       message.success('更新成功');
     }
     
@@ -315,7 +315,7 @@ func (g *Generator) generateTableModalComponent(dir string) error {
       :label-width="80"
       :disabled="loading"
     >
-{{formItems}}
+{{.FormItems}}
     </n-form>
     <div class="modal-footer">
       <n-button class="mr-2" @click="closeModal" :disabled="loading">取消</n-button>
@@ -334,12 +334,12 @@ const formRef = ref<FormInst | null>(null);
 // 基本状态
 const isShow = ref(false);
 const formData = reactive({
-{{formDataFields}}
+{{.FormDataFields}}
 });
 
 // 初始表单数据
 const initialFormData = {
-{{formDataFields}}
+{{.FormDataFields}}
 };
 
 // 接收的Props
@@ -360,7 +360,7 @@ const props = defineProps({
 
 // 表单验证规则
 const rules = {
-{{formRules}}
+{{.FormRules}}
 } as FormRules;
 
 // 事件
@@ -517,18 +517,18 @@ func (g *Generator) generateApiFile() error {
 export interface {{.StructName}}QueryParams {
   page?: number;
   pageSize?: number;
-{{queryParams}}
+{{.QueryParams}}
 }
 
 // {{.Description}}创建请求
 export interface {{.StructName}}CreateRequest {
-{{createFields}}
+{{.CreateFields}}
 }
 
 // {{.Description}}更新请求
 export interface {{.StructName}}UpdateRequest {
   id: number;
-{{updateFields}}
+{{.UpdateFields}}
 }
 
 // {{.Description}}响应
@@ -536,7 +536,7 @@ export interface {{.StructName}}Response {
   id: number;
   createdAt: string;
   updatedAt: string;
-{{responseFields}}
+{{.ResponseFields}}
 }
 
 // {{.Description}}列表响应

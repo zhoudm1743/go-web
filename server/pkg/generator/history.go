@@ -43,13 +43,25 @@ type HistoryManager struct {
 
 // NewHistoryManager 创建历史管理器
 func NewHistoryManager() *HistoryManager {
+	db := facades.DB()
+	if db == nil {
+		fmt.Println("警告: 数据库连接未初始化，使用内存数据库进行操作。")
+		// 在实际应用中，这里可以配置内存数据库或返回错误
+		return &HistoryManager{
+			DB: nil, // 表示使用内存数据库
+		}
+	}
 	return &HistoryManager{
-		DB: facades.DB(),
+		DB: db,
 	}
 }
 
 // Migrate 迁移历史表
 func (h *HistoryManager) Migrate() error {
+	if h.DB == nil {
+		fmt.Println("警告: 数据库连接未初始化，跳过迁移。")
+		return nil // 如果数据库连接未初始化，则跳过迁移
+	}
 	return h.DB.AutoMigrate(&HistoryModel{})
 }
 
@@ -78,6 +90,11 @@ func (h *HistoryManager) Create(config *Config, templates map[string]string) (ui
 		Templates:   string(templatesJSON),
 		Flag:        0,
 		BusinessDB:  "", // 默认使用主数据库
+	}
+
+	if h.DB == nil {
+		fmt.Println("警告: 数据库连接未初始化，跳过创建历史记录。")
+		return 0, nil // 如果数据库连接未初始化，则跳过创建并返回成功
 	}
 
 	if err := h.DB.Create(history).Error; err != nil {

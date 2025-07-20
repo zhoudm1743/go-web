@@ -7,7 +7,7 @@ import (
 )
 
 // InitRoutes 初始化路由
-func InitRoutes(r *gin.RouterGroup) {
+func RegisterRoutes(r *gin.RouterGroup) {
 	// 初始化控制器
 	authController := controllers.NewAuthController()
 	adminController := controllers.NewAdminController()
@@ -20,12 +20,12 @@ func InitRoutes(r *gin.RouterGroup) {
 	{
 		// 认证相关路由
 		publicRoutes.POST("/login", authController.Login)
-		publicRoutes.POST("/refresh", authController.RefreshToken)
+		// publicRoutes.POST("/refresh", authController.RefreshToken)
 	}
 
 	// 私有路由
 	privateRoutes := r.Group("/admin")
-	privateRoutes.Use(middlewares.AuthMiddleware())
+	privateRoutes.Use(middlewares.AdminAuth())
 	{
 		// 认证相关路由
 		privateRoutes.GET("/me", authController.GetUserInfo)
@@ -39,7 +39,7 @@ func InitRoutes(r *gin.RouterGroup) {
 
 		// 菜单路由
 		privateRoutes.GET("/menus", menuController.GetMenus)
-		privateRoutes.GET("/menus/tree", menuController.GetMenuTree)
+		// privateRoutes.GET("/menus/tree", menuController.GetMenuTree)
 		privateRoutes.POST("/menu", menuController.CreateMenu)
 		privateRoutes.PUT("/menu", menuController.UpdateMenu)
 		privateRoutes.DELETE("/menu/:id", menuController.DeleteMenu)
@@ -49,7 +49,7 @@ func InitRoutes(r *gin.RouterGroup) {
 		privateRoutes.POST("/role", roleController.CreateRole)
 		privateRoutes.PUT("/role", roleController.UpdateRole)
 		privateRoutes.DELETE("/role/:id", roleController.DeleteRole)
-		privateRoutes.PUT("/role/menu", roleController.AssignMenu)
+		// privateRoutes.PUT("/role/menu", roleController.AssignMenu)
 
 		// 代码生成器路由
 		codeGenController.RegisterRoutes(privateRoutes)

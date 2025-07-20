@@ -178,6 +178,10 @@ func (m *{{.StructName}}) LoadRelations(db *gorm.DB) *gorm.DB {
 		} else {
 			// 普通字段
 			if field.IsPrimaryKey {
+				// 跳过名为ID的主键字段，因为已经在模板中默认定义了
+				if field.FieldName == "ID" {
+					continue
+				}
 				gormTag = fmt.Sprintf(`gorm:"primaryKey;column:%s" json:"%s"`, field.ColumnName, ToLowerCamel(field.FieldName))
 			} else {
 				gormTag = fmt.Sprintf(`gorm:"column:%s" json:"%s"`, field.ColumnName, ToLowerCamel(field.FieldName))

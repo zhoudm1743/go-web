@@ -108,19 +108,19 @@ func (c *CodeGenController) GetColumns(ctx *gin.Context) {
 // Generate 生成代码
 func (c *CodeGenController) Generate(ctx *gin.Context) {
 	var req struct {
-		StructName    string            `json:"structName"`
-		TableName     string            `json:"tableName"`
-		PackageName   string            `json:"packageName"`
-		Description   string            `json:"description"`
-		ApiPrefix     string            `json:"apiPrefix"`
-		AppName       string            `json:"appName"`
-		HasList       bool              `json:"hasList"`
-		HasCreate     bool              `json:"hasCreate"`
-		HasUpdate     bool              `json:"hasUpdate"`
-		HasDelete     bool              `json:"hasDelete"`
-		HasDetail     bool              `json:"hasDetail"`
-		HasPagination bool              `json:"hasPagination"`
-		Fields        []generator.Field `json:"fields"`
+		StructName    string             `json:"structName"`
+		TableName     string             `json:"tableName"`
+		PackageName   string             `json:"packageName"`
+		Description   string             `json:"description"`
+		ApiPrefix     string             `json:"apiPrefix"`
+		AppName       string             `json:"appName"`
+		HasList       bool               `json:"hasList"`
+		HasCreate     bool               `json:"hasCreate"`
+		HasUpdate     bool               `json:"hasUpdate"`
+		HasDelete     bool               `json:"hasDelete"`
+		HasDetail     bool               `json:"hasDetail"`
+		HasPagination bool               `json:"hasPagination"`
+		Fields        []*generator.Field `json:"fields"`
 	}
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
