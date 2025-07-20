@@ -214,6 +214,23 @@ func CreateDefaultAdminIfNotExists(db *gorm.DB) error {
 		return err
 	}
 
+	// 创建代码生成器菜单
+	codegenMenu := &Menu{
+		PID:          &settingMenu.ID,
+		Name:         "codegen",
+		Path:         "/setting/codegen",
+		Component:    "/setting/codegen/index.vue",
+		Icon:         "icon-park-outline:code",
+		Title:        "代码生成器",
+		Order:        4,
+		RequiresAuth: true,
+		MenuType:     "page",
+		Status:       1,
+	}
+	if err := db.Create(codegenMenu).Error; err != nil {
+		return err
+	}
+
 	// 关联角色和菜单
 	roleMenus := []RoleMenu{
 		{RoleID: adminRole.ID, MenuID: dashboardMenu.ID},
@@ -222,6 +239,7 @@ func CreateDefaultAdminIfNotExists(db *gorm.DB) error {
 		{RoleID: adminRole.ID, MenuID: menuSettingMenu.ID},
 		{RoleID: adminRole.ID, MenuID: roleSettingMenu.ID},
 		{RoleID: adminRole.ID, MenuID: adminSettingMenu.ID},
+		{RoleID: adminRole.ID, MenuID: codegenMenu.ID},
 	}
 
 	if err := db.Create(&roleMenus).Error; err != nil {

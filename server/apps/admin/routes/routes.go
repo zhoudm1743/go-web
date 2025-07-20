@@ -4,73 +4,54 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zhoudm1743/go-web/apps/admin/controllers"
 	"github.com/zhoudm1743/go-web/apps/admin/middlewares"
-	"github.com/zhoudm1743/go-web/core/middleware"
 )
 
-// RegisterRoutes 注册路由
-func RegisterRoutes(r *gin.RouterGroup) {
+// InitRoutes 初始化路由
+func InitRoutes(r *gin.RouterGroup) {
 	// 初始化控制器
 	authController := controllers.NewAuthController()
-	userController := controllers.NewAdminController()
+	adminController := controllers.NewAdminController()
 	menuController := controllers.NewMenuController()
 	roleController := controllers.NewRoleController()
+	codeGenController := controllers.NewCodeGenController()
 
-	// 公共路由（无需认证）
+	// 公开路由
+	publicRoutes := r.Group("/admin")
 	{
-		// 登录认证
-		r.POST("/login", authController.Login)
+		// 认证相关路由
+		publicRoutes.POST("/login", authController.Login)
+		publicRoutes.POST("/refresh", authController.RefreshToken)
 	}
 
-	// 需要认证的路由
-	privateRoutes := r.Group("")
-	privateRoutes.Use(middleware.JWTAuth())
+	// 私有路由
+	privateRoutes := r.Group("/admin")
+	privateRoutes.Use(middlewares.AuthMiddleware())
 	{
-		// 认证相关
+		// 认证相关路由
+		privateRoutes.GET("/me", authController.GetUserInfo)
 		privateRoutes.POST("/logout", authController.Logout)
-		privateRoutes.GET("/userInfo", authController.GetUserInfo)
-		privateRoutes.GET("/accessCodes", authController.GetAccessCodes)
 
-		// 用户路由菜单
-		privateRoutes.GET("/getUserRoutes", authController.GetUserRoutes)
+		// 管理员路由
+		privateRoutes.GET("/admins", adminController.GetAdmins)
+		privateRoutes.POST("/admin", adminController.CreateAdmin)
+		privateRoutes.PUT("/admin", adminController.UpdateAdmin)
+		privateRoutes.DELETE("/admin/:id", adminController.DeleteAdmin)
 
-		// 所有菜单（用于菜单管理页面）
-		privateRoutes.GET("/getAllRoutes", authController.GetAllRoutes)
+		// 菜单路由
+		privateRoutes.GET("/menus", menuController.GetMenus)
+		privateRoutes.GET("/menus/tree", menuController.GetMenuTree)
+		privateRoutes.POST("/menu", menuController.CreateMenu)
+		privateRoutes.PUT("/menu", menuController.UpdateMenu)
+		privateRoutes.DELETE("/menu/:id", menuController.DeleteMenu)
 
-		// 角色相关
-		roleGroup := privateRoutes.Group("/role")
-		{
-			// 角色列表 - 简单列表，用于下拉选择
-			roleGroup.GET("/list", roleController.GetRoleList)
-			roleGroup.POST("/create", roleController.CreateRole)
-			roleGroup.PUT("/update", roleController.UpdateRole)
-			roleGroup.DELETE("/delete/:id", roleController.DeleteRole)
-			roleGroup.GET("/menus", roleController.GetRoleMenus)
-			roleGroup.POST("/menus", roleController.UpdateRoleMenus)
-		}
+		// 角色路由
+		privateRoutes.GET("/roles", roleController.GetRoles)
+		privateRoutes.POST("/role", roleController.CreateRole)
+		privateRoutes.PUT("/role", roleController.UpdateRole)
+		privateRoutes.DELETE("/role/:id", roleController.DeleteRole)
+		privateRoutes.PUT("/role/menu", roleController.AssignMenu)
 
-		// 用户管理
-		userGroup := privateRoutes.Group("/user")
-		userGroup.Use(middlewares.PermissionAuth())
-		{
-			userGroup.GET("/list", userController.GetAdmins)
-			userGroup.POST("/create", userController.CreateAdmin)
-			userGroup.PUT("/update", userController.UpdateAdmin)
-			userGroup.DELETE("/delete/:id", userController.DeleteAdmin)
-		}
-	}
-
-	// 需要认证和管理员权限的路由
-	adminRoutes := r.Group("/admin")
-	adminRoutes.Use(middleware.JWTAuth())
-	adminRoutes.Use(middlewares.AdminAuth())
-	{
-		// 菜单管理
-		menuGroup := adminRoutes.Group("/menu")
-		{
-			menuGroup.GET("/list", menuController.GetMenus)
-			menuGroup.POST("/create", menuController.CreateMenu)
-			menuGroup.PUT("/update", menuController.UpdateMenu)
-			menuGroup.DELETE("/delete/:id", menuController.DeleteMenu)
-		}
+		// 代码生成器路由
+		codeGenController.RegisterRoutes(privateRoutes)
 	}
 }

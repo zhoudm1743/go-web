@@ -7,6 +7,16 @@ export const routes: RouteRecordRaw[] = [
     name: 'root',
     redirect: '/appRoot',
     children: [
+      {
+        path: 'setting/codegen',
+        name: 'codegen',
+        component: () => import('@/views/setting/codegen/index.vue'),
+        meta: {
+          title: '代码生成器',
+          icon: 'icon-park-outline:code',
+          requiresAuth: true,
+        },
+      },
     ],
   },
   {
@@ -67,5 +77,4 @@ export const routes: RouteRecordRaw[] = [
       withoutTab: true,
     },
   },
-
 ]

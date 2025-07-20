@@ -1,0 +1,11 @@
+
+	// 产品路由
+	productGroup := privateRoutes.Group("/products")
+	productGroup.Use(middlewares.PermissionAuth())
+	{
+		productGroup.GET("/list", productController.GetProducts)
+		productGroup.GET("/detail/:id", productController.GetProduct)
+		productGroup.POST("/create", productController.CreateProduct)
+		productGroup.PUT("/update", productController.UpdateProduct)
+		productGroup.DELETE("/delete/:id", productController.DeleteProduct)
+	}
