@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useBoolean } from '@/hooks'
-import { fetchRoleList } from '@/service'
+import { fetchRoleList, createAdmin, updateAdmin } from '@/service'
 
 interface Props {
   modalName?: string
@@ -13,20 +13,22 @@ const {
 const emit = defineEmits<{
   open: []
   close: []
+  success: []
 }>()
 
 const { bool: modalVisible, setTrue: showModal, setFalse: hiddenModal } = useBoolean(false)
 
 const { bool: submitLoading, setTrue: startLoading, setFalse: endLoading } = useBoolean(false)
 
-const formDefault: Entity.User = {
-  userName: '',
+const formDefault: Entity.Admin = {
+  username: '',
+  nickname: '',
   email: '',
-  tel: '',
-  role: [],
+  mobile: '',
+  roleId: undefined,
   status: 1,
 }
-const formModel = ref<Entity.User>({ ...formDefault })
+const formModel = ref<Entity.Admin>({ ...formDefault })
 
 type ModalType = 'add' | 'view' | 'edit'
 const modalType = shallowRef<ModalType>('add')
@@ -74,34 +76,47 @@ defineExpose({
 
 const formRef = ref()
 async function submitModal() {
-  const handlers = {
-    async add() {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          window.$message.success('模拟新增成功')
-          resolve(true)
-        }, 2000)
-      })
-    },
-    async edit() {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          window.$message.success('模拟编辑成功')
-          resolve(true)
-        }, 2000)
-      })
-    },
-    async view() {
-      return true
-    },
+  try {
+    await formRef.value?.validate()
+    startLoading()
+    
+    const handlers = {
+      async add() {
+        const { isSuccess } = await createAdmin(formModel.value)
+        if (isSuccess) {
+          window.$message.success('管理员创建成功')
+          emit('success')
+          return true
+        }
+        return false
+      },
+      async edit() {
+        const { isSuccess } = await updateAdmin(formModel.value)
+        if (isSuccess) {
+          window.$message.success('管理员更新成功')
+          emit('success')
+          return true
+        }
+        return false
+      },
+      async view() {
+        return true
+      },
+    }
+    
+    const result = await handlers[modalType.value]()
+    if (result) {
+      closeModal()
+    }
+  } catch (error) {
+    console.error('提交表单出错:', error)
+  } finally {
+    endLoading()
   }
-  await formRef.value?.validate()
-  startLoading()
-  await handlers[modalType.value]() && closeModal()
 }
 
 const rules = {
-  userName: {
+  username: {
     required: true,
     message: '请输入用户名',
     trigger: 'blur',
@@ -129,42 +144,33 @@ async function getRoleList() {
   >
     <n-form ref="formRef" :rules="rules" label-placement="left" :model="formModel" :label-width="100" :disabled="modalType === 'view'">
       <n-grid :cols="2" :x-gap="18">
-        <n-form-item-grid-item :span="1" label="用户名" path="userName">
-          <n-input v-model:value="formModel.userName" />
+        <n-form-item-grid-item :span="1" label="用户名" path="username">
+          <n-input v-model:value="formModel.username" />
         </n-form-item-grid-item>
-        <n-form-item-grid-item :span="1" label="性别" path="gender">
-          <n-radio-group v-model:value="formModel.gender">
-            <n-space>
-              <n-radio :value="1">
-                男
-              </n-radio>
-              <n-radio :value="0">
-                女
-              </n-radio>
-            </n-space>
-          </n-radio-group>
+        <n-form-item-grid-item :span="1" label="昵称" path="nickname">
+          <n-input v-model:value="formModel.nickname" />
+        </n-form-item-grid-item>
+        <n-form-item-grid-item :span="1" label="真实姓名" path="realName">
+          <n-input v-model:value="formModel.realName" />
         </n-form-item-grid-item>
         <n-form-item-grid-item :span="1" label="邮箱" path="email">
           <n-input v-model:value="formModel.email" />
         </n-form-item-grid-item>
-        <n-form-item-grid-item :span="1" label="联系方式" path="tel">
-          <n-input v-model:value="formModel.tel" />
+        <n-form-item-grid-item :span="1" label="联系方式" path="mobile">
+          <n-input v-model:value="formModel.mobile" />
         </n-form-item-grid-item>
-        <n-form-item-grid-item :span="2" label="角色" path="role">
+        <n-form-item-grid-item :span="1" label="角色" path="roleId">
           <n-select
-            v-model:value="formModel.role" multiple filterable
-            label-field="role"
+            v-model:value="formModel.roleId" filterable
+            label-field="name"
             value-field="id"
             :options="options"
           />
         </n-form-item-grid-item>
-        <n-form-item-grid-item :span="2" label="备注" path="remark">
-          <n-input v-model:value="formModel.remark" type="textarea" />
-        </n-form-item-grid-item>
         <n-form-item-grid-item :span="1" label="用户状态" path="status">
           <n-switch
             v-model:value="formModel.status"
-            :checked-value="1" :unchecked-value="0"
+            :checked-value="1" :unchecked-value="2"
           >
             <template #checked>
               启用

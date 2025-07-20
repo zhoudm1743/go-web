@@ -2,7 +2,7 @@
 import type { DataTableColumns } from 'naive-ui'
 import CopyText from '@/components/custom/CopyText.vue'
 import { useBoolean } from '@/hooks'
-import { fetchDictList } from '@/service'
+import { fetchDictList, deleteDict } from '@/service'
 import { useDictStore } from '@/store'
 import { NButton, NFlex, NPopconfirm } from 'naive-ui'
 import DictModal from './components/DictModal.vue'
@@ -39,6 +39,36 @@ async function getDictContent(code: string) {
   endContentLoading()
 }
 
+// 处理字典项成功事件
+function handleDictSuccess() {
+  getDictList()
+}
+
+// 处理字典值成功事件
+function handleDictContentSuccess() {
+  if (lastDictCode.value) {
+    getDictContent(lastDictCode.value)
+  }
+}
+
+async function deleteDictItem(id: number) {
+  try {
+    const { isSuccess } = await deleteDict(id)
+    if (isSuccess) {
+      window.$message.success('字典删除成功')
+      getDictList()
+      
+      // 如果当前正在查看的字典内容被删除，清空字典内容
+      if (lastDictCode.value) {
+        getDictContent(lastDictCode.value)
+      }
+    }
+  } catch (error) {
+    console.error('删除字典失败:', error)
+    window.$message.error('删除字典失败')
+  }
+}
+
 const dictColumns: DataTableColumns<Entity.Dict> = [
   {
     title: '字典项',
@@ -72,7 +102,7 @@ const dictColumns: DataTableColumns<Entity.Dict> = [
           >
             编辑
           </NButton>
-          <NPopconfirm onPositiveClick={() => deleteDict(row.id!)}>
+          <NPopconfirm onPositiveClick={() => deleteDictItem(row.id!)}>
             {{
               default: () => (
                 <span>
@@ -118,7 +148,7 @@ const contentColumns: DataTableColumns<Entity.Dict> = [
           >
             编辑
           </NButton>
-          <NPopconfirm onPositiveClick={() => deleteDict(row.id!)}>
+          <NPopconfirm onPositiveClick={() => deleteDictItem(row.id!)}>
             {{
               default: () => (
                 <span>
@@ -136,10 +166,6 @@ const contentColumns: DataTableColumns<Entity.Dict> = [
     },
   },
 ]
-
-function deleteDict(id: number) {
-  window.$message.error(`删除字典${id}`)
-}
 </script>
 
 <template>
@@ -197,8 +223,8 @@ function deleteDict(id: number) {
       </n-card>
     </div>
 
-    <DictModal ref="dictRef" modal-name="字典项" is-root />
-    <DictModal ref="dictContentRef" modal-name="字典值" :dict-code="lastDictCode" />
+    <DictModal ref="dictRef" modal-name="字典项" is-root @success="handleDictSuccess" />
+    <DictModal ref="dictContentRef" modal-name="字典值" :dict-code="lastDictCode" @success="handleDictContentSuccess" />
   </NFlex>
 </template>
 

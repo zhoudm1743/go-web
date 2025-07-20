@@ -15,7 +15,7 @@ export function usePermission() {
       return false
     const { role } = authStore.userInfo
 
-    // 角色为super可直接通过
+    // 角色为admin或super均可直接通过
     let has = role.includes('super')
     if (!has) {
       if (isArray(permission))

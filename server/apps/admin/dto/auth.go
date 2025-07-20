@@ -1,58 +1,119 @@
 package dto
 
-// LoginRequest 登录请求参数
+// LoginRequest 登录请求
 type LoginRequest struct {
-	Username string `json:"username" binding:"required,min=2,max=50"`
-	Password string `json:"password" binding:"required,min=6,max=50"`
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 // LoginResponse 登录响应
 type LoginResponse struct {
-	ID          uint     `json:"id"`
-	Username    string   `json:"username"`
-	RealName    string   `json:"realName"`
-	Roles       []string `json:"roles"`
-	AccessToken string   `json:"accessToken"`
-	HomePath    string   `json:"homePath,omitempty"`
+	ID           uint     `json:"id"`
+	Username     string   `json:"username"`
+	RealName     string   `json:"realName"`
+	Roles        []string `json:"role"`
+	AccessToken  string   `json:"accessToken"`
+	RefreshToken string   `json:"refreshToken"`
 }
 
-// UserInfoResponse 用户信息响应
-type UserInfoResponse struct {
+// AdminInfoResponse 用户信息响应
+type AdminInfoResponse struct {
 	ID       uint     `json:"id"`
 	Username string   `json:"username"`
 	RealName string   `json:"realName"`
-	Roles    []string `json:"roles"`
-	HomePath string   `json:"homePath,omitempty"`
+	Roles    []string `json:"role"`
+	Avatar   string   `json:"avatar"`
 }
 
-// MenuItem 菜单项
-type MenuItem struct {
-	Name      string     `json:"name"`
-	Path      string     `json:"path"`
-	Component string     `json:"component,omitempty"`
-	Redirect  string     `json:"redirect,omitempty"`
-	Meta      MenuMeta   `json:"meta"`
-	Children  []MenuItem `json:"children,omitempty"`
+// MenuListRequest 菜单列表请求
+type MenuListRequest struct {
+	Title string `form:"title"`
+	Path  string `form:"path"`
+	Name  string `form:"name"`
 }
 
-// MenuMeta 菜单元数据
-type MenuMeta struct {
-	Icon                     string   `json:"icon,omitempty"`
-	Title                    string   `json:"title"`
-	HideMenu                 bool     `json:"hideMenu,omitempty"`
-	HideChildrenInMenu       bool     `json:"hideChildrenInMenu,omitempty"`
-	HideTab                  bool     `json:"hideTab,omitempty"`
-	IgnoreAuth               bool     `json:"ignoreAuth,omitempty"`
-	IgnoreKeepAlive          bool     `json:"ignoreKeepAlive,omitempty"`
-	AffixTab                 bool     `json:"affixTab,omitempty"`
-	Order                    int      `json:"order,omitempty"`
-	FrameSrc                 string   `json:"frameSrc,omitempty"`
-	CarryParam               bool     `json:"carryParam,omitempty"`
-	SingleLayout             string   `json:"singleLayout,omitempty"`
-	KeepAlive                bool     `json:"keepAlive,omitempty"`
-	Authority                []string `json:"authority,omitempty"`
-	MenuVisibleWithForbidden bool     `json:"menuVisibleWithForbidden,omitempty"`
+// MenuCreateRequest 创建菜单请求
+type MenuCreateRequest struct {
+	PID          *uint  `json:"pid"`
+	Name         string `json:"name" binding:"required"`
+	Path         string `json:"path" binding:"required"`
+	Component    string `json:"componentPath"`
+	Redirect     string `json:"redirect"`
+	Icon         string `json:"icon"`
+	Title        string `json:"title" binding:"required"`
+	Order        int    `json:"order"`
+	Hidden       bool   `json:"hide"`
+	KeepAlive    bool   `json:"keepAlive"`
+	RequiresAuth bool   `json:"requiresAuth"`
+	WithoutTab   bool   `json:"withoutTab"`
+	PinTab       bool   `json:"pinTab"`
+	MenuType     string `json:"menuType" binding:"required"`
 }
 
-// MenuResponse 菜单响应别名
-type MenuResponse = MenuItem
+// MenuUpdateRequest 更新菜单请求
+type MenuUpdateRequest struct {
+	ID           uint   `json:"id" binding:"required"`
+	PID          *uint  `json:"pid"`
+	Name         string `json:"name" binding:"required"`
+	Path         string `json:"path" binding:"required"`
+	Component    string `json:"componentPath"`
+	Redirect     string `json:"redirect"`
+	Icon         string `json:"icon"`
+	Title        string `json:"title" binding:"required"`
+	Order        int    `json:"order"`
+	Hidden       bool   `json:"hide"`
+	KeepAlive    bool   `json:"keepAlive"`
+	RequiresAuth bool   `json:"requiresAuth"`
+	WithoutTab   bool   `json:"withoutTab"`
+	PinTab       bool   `json:"pinTab"`
+	MenuType     string `json:"menuType" binding:"required"`
+}
+
+// RoleCreateRequest 创建角色请求
+type RoleCreateRequest struct {
+	Name   string `json:"name" binding:"required"`
+	Code   string `json:"code" binding:"required"`
+	Sort   uint   `json:"sort"`
+	Status uint   `json:"status"`
+	Remark string `json:"remark"`
+}
+
+// RoleUpdateRequest 更新角色请求
+type RoleUpdateRequest struct {
+	ID     uint   `json:"id" binding:"required"`
+	Name   string `json:"name"`
+	Code   string `json:"code"`
+	Sort   uint   `json:"sort"`
+	Status uint   `json:"status"`
+	Remark string `json:"remark"`
+}
+
+// RoleMenuRequest 角色菜单关联请求
+type RoleMenuRequest struct {
+	RoleID  uint   `json:"roleId" binding:"required"`
+	MenuIDs []uint `json:"menuIds"`
+}
+
+// AdminCreateRequest 创建用户请求
+type AdminCreateRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+	Nickname string `json:"nickname"`
+	RealName string `json:"realName"`
+	Email    string `json:"email"`
+	Mobile   string `json:"mobile"`
+	RoleID   uint   `json:"roleId"`
+	Status   uint   `json:"status"`
+}
+
+// AdminUpdateRequest 更新用户请求
+type AdminUpdateRequest struct {
+	ID       uint   `json:"id" binding:"required"`
+	Username string `json:"username"`
+	Nickname string `json:"nickname"`
+	RealName string `json:"realName"`
+	Email    string `json:"email"`
+	Mobile   string `json:"mobile"`
+	RoleID   uint   `json:"roleId"`
+	Status   uint   `json:"status"`
+}

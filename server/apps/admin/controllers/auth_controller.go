@@ -28,20 +28,17 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	user, token, err := c.AuthService.Login(req.Username, req.Password)
+	admin, token, err := c.AuthService.Login(req.Username, req.Password)
 	if err != nil {
 		response.FailWithMsg(ctx, response.LoginAccountError, err.Error())
 		return
 	}
 
-	// 构造响应
-	loginResp := dto.LoginResponse{
-		ID:          user.ID,
-		Username:    user.Username,
-		RealName:    user.RealName,
-		Roles:       user.GetRoles(),
-		AccessToken: token,
-	}
+	// 使用Copy函数构造响应
+	loginResp := &dto.LoginResponse{}
+	response.Copy(loginResp, admin)
+	loginResp.AccessToken = token
+	loginResp.Roles = admin.GetRoles()
 
 	response.OkWithData(ctx, loginResp)
 }
@@ -49,7 +46,6 @@ func (c *AuthController) Login(ctx *gin.Context) {
 // Logout 用户登出
 func (c *AuthController) Logout(ctx *gin.Context) {
 	// JWT无状态，服务端只需清除cookie
-	// TODO: 实现Redis黑名单
 	response.Ok(ctx)
 }
 
@@ -62,19 +58,16 @@ func (c *AuthController) GetUserInfo(ctx *gin.Context) {
 		return
 	}
 
-	user, err := c.AuthService.GetUserInfo(claims.UserID)
+	admin, err := c.AuthService.GetUserInfo(int(claims.UserID))
 	if err != nil {
 		response.Fail(ctx, response.SystemError)
 		return
 	}
 
-	// 返回用户信息
-	userInfo := dto.UserInfoResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		RealName: user.RealName,
-		Roles:    user.GetRoles(),
-	}
+	// 使用Copy函数返回用户信息
+	userInfo := &dto.AdminInfoResponse{}
+	response.Copy(userInfo, admin)
+	userInfo.Roles = admin.GetRoles()
 
 	response.OkWithData(ctx, userInfo)
 }
@@ -88,7 +81,7 @@ func (c *AuthController) GetAccessCodes(ctx *gin.Context) {
 		return
 	}
 
-	codes, err := c.AuthService.GetUserAccessCodes(claims.UserID)
+	codes, err := c.AuthService.GetUserAccessCodes(int(claims.UserID))
 	if err != nil {
 		response.Fail(ctx, response.SystemError)
 		return
@@ -97,8 +90,8 @@ func (c *AuthController) GetAccessCodes(ctx *gin.Context) {
 	response.OkWithData(ctx, codes)
 }
 
-// GetUserMenus 获取用户菜单
-func (c *AuthController) GetUserMenus(ctx *gin.Context) {
+// GetUserRoutes 获取用户路由菜单
+func (c *AuthController) GetUserRoutes(ctx *gin.Context) {
 	// 从JWT中获取用户信息
 	claims, err := utils.GetClaims(ctx)
 	if err != nil {
@@ -106,7 +99,18 @@ func (c *AuthController) GetUserMenus(ctx *gin.Context) {
 		return
 	}
 
-	menus, err := c.AuthService.GetUserMenus(claims.UserID)
+	menus, err := c.AuthService.GetUserMenus(int(claims.UserID))
+	if err != nil {
+		response.Fail(ctx, response.SystemError)
+		return
+	}
+
+	response.OkWithData(ctx, menus)
+}
+
+// GetAllRoutes 获取所有路由菜单（管理菜单页面使用）
+func (c *AuthController) GetAllRoutes(ctx *gin.Context) {
+	menus, err := c.AuthService.GetAllMenus()
 	if err != nil {
 		response.Fail(ctx, response.SystemError)
 		return

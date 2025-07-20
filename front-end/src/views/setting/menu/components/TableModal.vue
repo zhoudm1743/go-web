@@ -5,7 +5,7 @@ import type {
 import HelpInfo from '@/components/common/HelpInfo.vue'
 import { Regex } from '@/constants'
 import { useBoolean } from '@/hooks'
-import { fetchRoleList } from '@/service'
+import { fetchRoleList, createMenu, updateMenu } from '@/service'
 
 interface Props {
   modalName?: string
@@ -20,6 +20,7 @@ const {
 const emit = defineEmits<{
   open: []
   close: []
+  success: []
 }>()
 
 const { bool: modalVisible, setTrue: showModal, setFalse: hiddenModal } = useBoolean(false)
@@ -51,10 +52,30 @@ const modalTitle = computed(() => {
   return `${titleMap[modalType.value]}${modalName}`
 })
 
+// 组件路径选项
+const componentPathOptions = ref<Array<{label: string, value: string}>>([])
+
+// 初始化组件路径选项
+function initComponentPathOptions() {
+  // 这里使用import.meta.glob获取所有views下的index.vue文件
+  const modules = import.meta.glob('@/views/**/index.vue')
+  
+  // 将modules对象转换为select需要的格式
+  componentPathOptions.value = Object.keys(modules).map(path => {
+    // 从路径中提取相对路径部分，去掉/src/views前缀和.vue后缀
+    const componentPath = path.replace(/^\/src\/views/, '').replace(/\.vue$/, '')
+    return {
+      label: componentPath,
+      value: componentPath
+    }
+  })
+}
+
 async function openModal(type: ModalType = 'add', data: AppRoute.RowRoute) {
   emit('open')
   modalType.value = type
   getRoleList()
+  initComponentPathOptions() // 初始化组件路径选项
   showModal()
   const handlers = {
     async add() {
@@ -86,30 +107,43 @@ defineExpose({
 
 const formRef = ref()
 async function submitModal() {
-  const handlers = {
-    async add() {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          window.$message.success('模拟新增成功')
-          resolve(true)
-        }, 2000)
-      })
-    },
-    async edit() {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          window.$message.success('模拟编辑成功')
-          resolve(true)
-        }, 2000)
-      })
-    },
-    async view() {
-      return true
-    },
+  try {
+    await formRef.value?.validate()
+    startLoading()
+    
+    const handlers = {
+      async add() {
+        const { data, isSuccess } = await createMenu(formModel.value)
+        if (isSuccess) {
+          window.$message.success('菜单创建成功')
+          emit('success')
+          return true
+        }
+        return false
+      },
+      async edit() {
+        const { isSuccess } = await updateMenu(formModel.value)
+        if (isSuccess) {
+          window.$message.success('菜单更新成功')
+          emit('success')
+          return true
+        }
+        return false
+      },
+      async view() {
+        return true
+      },
+    }
+    
+    const result = await handlers[modalType.value]()
+    if (result) {
+      closeModal()
+    }
+  } catch (error) {
+    console.error('提交表单出错:', error)
+  } finally {
+    endLoading()
   }
-  await formRef.value?.validate()
-  startLoading()
-  await handlers[modalType.value]() && closeModal()
 }
 
 const dirTreeOptions = computed(() => {
@@ -152,7 +186,7 @@ const rules = {
   },
   componentPath: {
     required: true,
-    message: '请输入组件路径',
+    message: '请选择组件路径',
     trigger: 'blur',
   },
   title: {
@@ -219,7 +253,13 @@ async function getRoleList() {
           <icon-select v-model:value="formModel.icon" :disabled="modalType === 'view'" />
         </n-form-item-grid-item>
         <n-form-item-grid-item v-if="formModel.menuType === 'page'" :span="2" label="组件路径" path="componentPath">
-          <n-input v-model:value="formModel.componentPath" placeholder="Eg: /system/user/index.vue" />
+          <n-select
+            v-model:value="formModel.componentPath"
+            placeholder="请选择组件路径"
+            filterable
+            clearable
+            :options="componentPathOptions"
+          />
         </n-form-item-grid-item>
         <n-form-item-grid-item :span="1" path="order">
           <template #label>

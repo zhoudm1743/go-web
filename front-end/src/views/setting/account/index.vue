@@ -3,7 +3,7 @@ import type { DataTableColumns, FormInst } from 'naive-ui'
 import CopyText from '@/components/custom/CopyText.vue'
 import { Gender } from '@/constants'
 import { useBoolean } from '@/hooks'
-import { fetchUserPage } from '@/service'
+import { fetchAdminPage, deleteAdmin } from '@/service'
 import { NButton, NPopconfirm, NSpace, NSwitch, NTag } from 'naive-ui'
 import TableModal from './components/TableModal.vue'
 
@@ -21,33 +21,29 @@ function handleResetSearch() {
 const formRef = ref<FormInst | null>()
 const modalRef = ref()
 
-function delteteUser(id: number) {
-  window.$message.success(`删除用户id:${id}`)
+async function deleteAdminHandler(id: number) {
+  try {
+    const { isSuccess } = await deleteAdmin(id)
+    if (isSuccess) {
+      window.$message.success('管理员删除成功')
+      getAdminList() // 刷新管理员列表
+    }
+  } catch (error) {
+    console.error('删除管理员失败:', error)
+    window.$message.error('删除管理员失败')
+  }
 }
 
-const columns: DataTableColumns<Entity.User> = [
+const columns: DataTableColumns<Entity.Admin> = [
   {
     title: '姓名',
     align: 'center',
-    key: 'userName',
+    key: 'username', // 修改为username
   },
   {
-    title: '性别',
+    title: '昵称',
     align: 'center',
-    key: 'gender',
-    render: (row) => {
-      const tagType = {
-        0: 'primary',
-        1: 'success',
-      } as const
-      if (row.gender) {
-        return (
-          <NTag type={tagType[row.gender]}>
-            {Gender[row.gender]}
-          </NTag>
-        )
-      }
-    },
+    key: 'nickname',
   },
   {
     title: '邮箱',
@@ -57,10 +53,10 @@ const columns: DataTableColumns<Entity.User> = [
   {
     title: '联系方式',
     align: 'center',
-    key: 'tel',
+    key: 'mobile', // 修改为mobile
     render: (row) => {
       return (
-        <CopyText value={row.tel} />
+        <CopyText value={row.mobile} />
       )
     },
   },
@@ -95,7 +91,7 @@ const columns: DataTableColumns<Entity.User> = [
           >
             编辑
           </NButton>
-          <NPopconfirm onPositiveClick={() => delteteUser(row.id!)}>
+          <NPopconfirm onPositiveClick={() => deleteAdminHandler(row.id!)}>
             {{
               default: () => '确认删除',
               trigger: () => <NButton size="small" type="error">删除</NButton>,
@@ -108,24 +104,31 @@ const columns: DataTableColumns<Entity.User> = [
 ]
 
 const count = ref(0)
-const listData = ref<Entity.User[]>([])
+const listData = ref<Entity.Admin[]>([])
 function handleUpdateDisabled(value: 0 | 1, id: number) {
   const index = listData.value.findIndex(item => item.id === id)
   if (index > -1)
     listData.value[index].status = value
 }
 
-async function getUserList() {
+async function getAdminList() {
   startLoading()
-  await fetchUserPage().then((res: any) => {
-    listData.value = res.data.list
-    count.value = res.data.count
+  try {
+    const { data, isSuccess } = await fetchAdminPage()
+    if (isSuccess) {
+      listData.value = data
+      count.value = data.length
+    }
+  } catch (error) {
+    console.error('获取管理员列表失败:', error)
+    window.$message.error('获取管理员列表失败')
+  } finally {
     endLoading()
-  })
+  }
 }
 
 onMounted(() => {
-  getUserList()
+  getAdminList()
 })
 
 function changePage(page: number, size: number) {
@@ -181,7 +184,7 @@ const treeData = ref([
               <n-input v-model:value="model.condition_2" placeholder="请输入" />
             </n-form-item>
             <n-flex class="ml-auto">
-              <NButton type="primary" @click="getUserList">
+              <NButton type="primary" @click="getAdminList">
                 <template #icon>
                   <icon-park-outline-search />
                 </template>
@@ -204,7 +207,7 @@ const treeData = ref([
             <template #icon>
               <icon-park-outline-add-one />
             </template>
-            新建用户
+            新建管理员
           </NButton>
         </template>
         <NSpace vertical>
@@ -212,7 +215,7 @@ const treeData = ref([
           <Pagination :count="count" @change="changePage" />
         </NSpace>
 
-        <TableModal ref="modalRef" modal-name="用户" />
+        <TableModal ref="modalRef" modal-name="管理员" @success="getAdminList" />
       </n-card>
     </NSpace>
   </n-flex>

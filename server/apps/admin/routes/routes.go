@@ -7,66 +7,70 @@ import (
 	"github.com/zhoudm1743/go-web/core/middleware"
 )
 
-// RegisterRoutes 注册admin应用的所有路由
+// RegisterRoutes 注册路由
 func RegisterRoutes(r *gin.RouterGroup) {
-	// API前缀
-	apiGroup := r.Group("/api")
-
-	// 注册认证相关路由
-	RegisterAuthRoutes(apiGroup)
-
-	// TODO: 注册其他路由
-	// RegisterUserRoutes(apiGroup)
-	// RegisterRoleRoutes(apiGroup)
-	// RegisterMenuRoutes(apiGroup)
-}
-
-// RegisterAdminRoutes 注册管理后台路由
-func RegisterAdminRoutes(r *gin.RouterGroup) {
-	// 创建控制器实例
+	// 初始化控制器
 	authController := controllers.NewAuthController()
+	userController := controllers.NewAdminController()
+	menuController := controllers.NewMenuController()
+	roleController := controllers.NewRoleController()
 
-	// 认证相关路由
-	authRoutes := r.Group("/auth")
+	// 公共路由（无需认证）
 	{
-		// 无需认证的路由
-		authRoutes.POST("/login", authController.Login)
-		// authRoutes.POST("/register", authController.Register)
-		// authRoutes.POST("/refresh", authController.RefreshToken)
+		// 登录认证
+		r.POST("/login", authController.Login)
+	}
 
-		// 需要认证的路由
-		authProtected := authRoutes.Group("")
-		authProtected.Use(middlewares.JWTAuthMiddleware())
+	// 需要认证的路由
+	privateRoutes := r.Group("")
+	privateRoutes.Use(middleware.JWTAuth())
+	{
+		// 认证相关
+		privateRoutes.POST("/logout", authController.Logout)
+		privateRoutes.GET("/userInfo", authController.GetUserInfo)
+		privateRoutes.GET("/accessCodes", authController.GetAccessCodes)
+
+		// 用户路由菜单
+		privateRoutes.GET("/getUserRoutes", authController.GetUserRoutes)
+
+		// 所有菜单（用于菜单管理页面）
+		privateRoutes.GET("/getAllRoutes", authController.GetAllRoutes)
+
+		// 角色相关
+		roleGroup := privateRoutes.Group("/role")
 		{
-			authProtected.GET("/info", authController.GetUserInfo)
-			authProtected.GET("/menus", authController.GetUserMenus)
-			// authProtected.GET("/routers", authController.GetUserRouters)
-			// authProtected.PUT("/password", authController.ChangePassword)
-			authProtected.POST("/logout", authController.Logout)
+			// 角色列表 - 简单列表，用于下拉选择
+			roleGroup.GET("/list", roleController.GetRoleList)
+			roleGroup.POST("/create", roleController.CreateRole)
+			roleGroup.PUT("/update", roleController.UpdateRole)
+			roleGroup.DELETE("/delete/:id", roleController.DeleteRole)
+			roleGroup.GET("/menus", roleController.GetRoleMenus)
+			roleGroup.POST("/menus", roleController.UpdateRoleMenus)
+		}
+
+		// 用户管理
+		userGroup := privateRoutes.Group("/user")
+		userGroup.Use(middlewares.PermissionAuth())
+		{
+			userGroup.GET("/list", userController.GetAdmins)
+			userGroup.POST("/create", userController.CreateAdmin)
+			userGroup.PUT("/update", userController.UpdateAdmin)
+			userGroup.DELETE("/delete/:id", userController.DeleteAdmin)
 		}
 	}
 
-	// 用户管理路由组 (需要管理员权限)
-	userRoutes := r.Group("/users")
-	userRoutes.Use(middlewares.JWTAuthMiddleware())
-	userRoutes.Use(middleware.CasbinHandler()) // 使用Casbin权限检查
+	// 需要认证和管理员权限的路由
+	adminRoutes := r.Group("/admin")
+	adminRoutes.Use(middleware.JWTAuth())
+	adminRoutes.Use(middlewares.AdminAuth())
 	{
-		// TODO: 添加用户管理相关路由
-	}
-
-	// 角色管理路由组 (需要管理员权限)
-	roleRoutes := r.Group("/roles")
-	roleRoutes.Use(middlewares.JWTAuthMiddleware())
-	roleRoutes.Use(middleware.CasbinHandler()) // 使用Casbin权限检查
-	{
-		// TODO: 添加角色管理相关路由
-	}
-
-	// 菜单管理路由组 (需要管理员权限)
-	menuRoutes := r.Group("/menus")
-	menuRoutes.Use(middlewares.JWTAuthMiddleware())
-	menuRoutes.Use(middleware.CasbinHandler()) // 使用Casbin权限检查
-	{
-		// TODO: 添加菜单管理相关路由
+		// 菜单管理
+		menuGroup := adminRoutes.Group("/menu")
+		{
+			menuGroup.GET("/list", menuController.GetMenus)
+			menuGroup.POST("/create", menuController.CreateMenu)
+			menuGroup.PUT("/update", menuController.UpdateMenu)
+			menuGroup.DELETE("/delete/:id", menuController.DeleteMenu)
+		}
 	}
 }

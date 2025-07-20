@@ -41,17 +41,22 @@ export function setupRouterGuard(router: Router) {
 
     // 判断路由有无进行初始化
     if (!routeStore.isInitAuthRoute) {
-      await routeStore.initAuthRoute()
-      // 动态路由加载完回到根路由
-      if (to.name === '404') {
-      // 等待权限路由加载好了，回到之前的路由,否则404
-        next({
-          path: to.fullPath,
-          replace: true,
-          query: to.query,
-          hash: to.hash,
-        })
-        return
+      try {
+        await routeStore.initAuthRoute()
+        
+        // 如果当前路由是404但实际上应该存在，则重定向到正确路径
+        if (to.name === '404' && router.hasRoute(to.name)) {
+          next({
+            path: to.fullPath,
+            replace: true,
+            query: to.query,
+            hash: to.hash,
+          })
+          return
+        }
+      } catch (error) {
+        console.error('路由初始化失败:', error)
+        // 即使初始化失败，也让导航继续，避免卡在加载状态
       }
     }
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FormRules } from 'naive-ui'
 import { useBoolean } from '@/hooks'
+import { createDict, updateDict } from '@/service'
 
 interface Props {
   modalName?: string
@@ -17,6 +18,7 @@ const {
 const emit = defineEmits<{
   open: []
   close: []
+  success: []
 }>()
 
 const { bool: modalVisible, setTrue: showModal, setFalse: hiddenModal } = useBoolean(false)
@@ -79,30 +81,43 @@ defineExpose({
 
 const formRef = ref()
 async function submitModal() {
-  const handlers = {
-    async add() {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          window.$message.success('模拟新增成功')
-          resolve(true)
-        }, 2000)
-      })
-    },
-    async edit() {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          window.$message.success('模拟编辑成功')
-          resolve(true)
-        }, 2000)
-      })
-    },
-    async view() {
-      return true
-    },
+  try {
+    await formRef.value?.validate()
+    startLoading()
+    
+    const handlers = {
+      async add() {
+        const { isSuccess } = await createDict(formModel.value)
+        if (isSuccess) {
+          window.$message.success('字典创建成功')
+          emit('success')
+          return true
+        }
+        return false
+      },
+      async edit() {
+        const { isSuccess } = await updateDict(formModel.value)
+        if (isSuccess) {
+          window.$message.success('字典更新成功')
+          emit('success')
+          return true
+        }
+        return false
+      },
+      async view() {
+        return true
+      },
+    }
+    
+    const result = await handlers[modalType.value]()
+    if (result) {
+      closeModal()
+    }
+  } catch (error) {
+    console.error('提交字典出错:', error)
+  } finally {
+    endLoading()
   }
-  await formRef.value?.validate()
-  startLoading()
-  await handlers[modalType.value]() && closeModal()
 }
 
 const rules: FormRules = {

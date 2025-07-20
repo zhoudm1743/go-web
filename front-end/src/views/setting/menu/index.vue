@@ -2,15 +2,24 @@
 import type { DataTableColumns } from 'naive-ui'
 import CopyText from '@/components/custom/CopyText.vue'
 import { useBoolean } from '@/hooks'
-import { fetchAllRoutes } from '@/service'
+import { fetchAllRoutes, deleteMenu } from '@/service'
 import { arrayToTree, createIcon } from '@/utils'
 import { NButton, NPopconfirm, NSpace, NTag } from 'naive-ui'
 import TableModal from './components/TableModal.vue'
 
 const { bool: loading, setTrue: startLoading, setFalse: endLoading } = useBoolean(false)
 
-function deleteData(id: number) {
-  window.$message.success(`删除菜单id:${id}`)
+async function deleteData(id: number) {
+  try {
+    const { isSuccess } = await deleteMenu(id)
+    if (isSuccess) {
+      window.$message.success(`菜单删除成功`)
+      await getAllRoutes() // 刷新列表
+    }
+  } catch (error) {
+    console.error('删除菜单失败:', error)
+    window.$message.error('删除菜单失败')
+  }
 }
 
 const tableModalRef = ref()
@@ -125,9 +134,30 @@ async function getAllRoutes() {
   endLoading()
 }
 
+// 处理表单提交成功事件，刷新菜单列表
+function handleFormSuccess() {
+  getAllRoutes()
+}
+
 const checkedRowKeys = ref<number[]>([])
 async function handlePositiveClick() {
-  window.$message.success(`批量删除id:${checkedRowKeys.value.join(',')}`)
+  if (checkedRowKeys.value.length === 0) {
+    window.$message.warning('请先选择要删除的菜单')
+    return
+  }
+  
+  try {
+    // 这里可以使用Promise.all同时删除多个菜单
+    // 或者实现一个批量删除的接口
+    const promises = checkedRowKeys.value.map(id => deleteMenu(id))
+    await Promise.all(promises)
+    window.$message.success('批量删除成功')
+    checkedRowKeys.value = []
+    await getAllRoutes()
+  } catch (error) {
+    console.error('批量删除失败:', error)
+    window.$message.error('批量删除失败')
+  }
 }
 </script>
 
@@ -172,6 +202,6 @@ async function handlePositiveClick() {
       size="small"
       :scroll-x="1200"
     />
-    <TableModal ref="tableModalRef" :all-routes="tableData" modal-name="菜单" />
+    <TableModal ref="tableModalRef" :all-routes="tableData" modal-name="菜单" @success="handleFormSuccess" />
   </n-card>
 </template>

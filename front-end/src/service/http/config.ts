@@ -11,7 +11,7 @@ export const DEFAULT_BACKEND_OPTIONS = {
   codeKey: 'code',
   dataKey: 'data',
   msgKey: 'message',
-  successCode: 200,
+  successCode: 0,
 }
 
 /** 请求不成功各种状态的错误 */
