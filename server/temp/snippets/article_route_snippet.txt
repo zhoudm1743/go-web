@@ -1,0 +1,11 @@
+
+	// 文章路由
+	articleGroup := privateRoutes.Group("/article")
+	articleGroup.Use(middlewares.PermissionAuth())
+	{
+		articleGroup.GET("/list", articleController.GetArticles)
+		articleGroup.GET("/detail/:id", articleController.GetArticle)
+		articleGroup.POST("/create", articleController.CreateArticle)
+		articleGroup.PUT("/update", articleController.UpdateArticle)
+		articleGroup.DELETE("/delete/:id", articleController.DeleteArticle)
+	}

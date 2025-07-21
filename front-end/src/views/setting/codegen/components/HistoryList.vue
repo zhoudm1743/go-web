@@ -392,7 +392,7 @@ privateRoutes.DELETE("/${row.packageName}/${row.table}/:id", ${row.structName}Co
     
     <template #buttons>
       <n-button type="primary" @click="openModal()">
-        <template #icon><icon-ic-round-plus /></template>
+        <template #icon><icon-mdi:plus-circle /></template>
         添加${row.description}
       </n-button>
     </template>

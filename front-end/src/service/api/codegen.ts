@@ -43,6 +43,11 @@ export interface FieldInfo {
   references?: string;          // 引用字段 (关联模型字段)
   preload?: boolean;            // 是否预加载
   joinTable?: string;           // 多对多关联表名
+  
+  // JOIN查询相关
+  joinable?: boolean;           // 是否支持JOIN查询
+  joinCondition?: string;       // JOIN条件字段
+  filterCondition?: string;     // 过滤条件字段
 }
 
 // 代码生成配置

@@ -39,6 +39,9 @@ type {{.StructName}}QueryParams struct {
 	PageSize int ` + "`" + `form:"pageSize"` + "`" + `  // 每页条数
 {{if .HasRelations}}
 	WithRelations bool ` + "`" + `form:"withRelations"` + "`" + ` // 是否加载关联
+{{range .RelatedFilters}}
+	{{.FieldName}}Filter string ` + "`" + `form:"{{.JsonName}}Filter"` + "`" + ` // {{.FieldDesc}}过滤
+{{end}}
 {{end}}
 {{range .QueryFields}}
 	{{.FieldName}} {{.FieldType}} ` + "`" + `form:"{{.JsonName}}"` + "`" + `{{if .FieldDesc}} // {{.FieldDesc}}{{end}}
@@ -79,6 +82,7 @@ type {{.StructName}}ListResponse struct {
 		QueryFields    []FieldData
 		ResponseFields []FieldData
 		HasRelations   bool
+		RelatedFilters []FieldData // 添加关联过滤字段
 	}
 
 	data := TemplateData{
@@ -89,6 +93,7 @@ type {{.StructName}}ListResponse struct {
 		QueryFields:    make([]FieldData, 0),
 		ResponseFields: make([]FieldData, 0),
 		HasRelations:   false,
+		RelatedFilters: make([]FieldData, 0), // 初始化关联过滤字段
 	}
 
 	// 处理字段
@@ -127,8 +132,14 @@ type {{.StructName}}ListResponse struct {
 			data.ResponseFields = append(data.ResponseFields, responseField)
 
 			// 外键字段添加到创建和更新请求中
-			if field.RelationType == BelongsTo && field.ForeignKey != "" {
-				foreignKeyJsonName := ToLowerCamel(field.ForeignKey)
+			if field.RelationType == BelongsTo {
+				// 确定外键名称
+				foreignKey := field.ForeignKey
+				if foreignKey == "" {
+					foreignKey = field.RelatedModel + "ID" // 使用默认的外键命名
+				}
+
+				foreignKeyJsonName := ToLowerCamel(foreignKey)
 
 				// 创建请求字段
 				binding := ""
@@ -137,7 +148,7 @@ type {{.StructName}}ListResponse struct {
 				}
 
 				createField := FieldData{
-					FieldName: field.ForeignKey,
+					FieldName: foreignKey,
 					FieldType: "uint",
 					JsonName:  foreignKeyJsonName,
 					Binding:   binding,
@@ -147,7 +158,7 @@ type {{.StructName}}ListResponse struct {
 
 				// 更新请求字段
 				updateField := FieldData{
-					FieldName: field.ForeignKey,
+					FieldName: foreignKey,
 					FieldType: "uint",
 					JsonName:  foreignKeyJsonName,
 					FieldDesc: fmt.Sprintf("%s ID", field.FieldDesc),
@@ -157,12 +168,23 @@ type {{.StructName}}ListResponse struct {
 				// 查询参数字段
 				if field.IsSearchable || field.IsFilterable {
 					queryField := FieldData{
-						FieldName: field.ForeignKey,
+						FieldName: foreignKey,
 						FieldType: "uint",
 						JsonName:  foreignKeyJsonName,
 						FieldDesc: fmt.Sprintf("%s ID", field.FieldDesc),
 					}
 					data.QueryFields = append(data.QueryFields, queryField)
+				}
+
+				// 添加关联过滤字段
+				if field.IsFilterable {
+					filterField := FieldData{
+						FieldName: field.FieldName,
+						FieldType: "string",
+						JsonName:  ToLowerCamel(field.FieldName),
+						FieldDesc: field.FieldDesc,
+					}
+					data.RelatedFilters = append(data.RelatedFilters, filterField)
 				}
 			}
 			continue

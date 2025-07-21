@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"unicode"
@@ -101,6 +102,12 @@ func (g *Generator) Run() error {
 		return err
 	}
 
+	// 格式化生成的Go文件
+	if err := g.FormatGoFiles(); err != nil {
+		// 仅记录错误，不阻止生成过程
+		fmt.Printf("警告：格式化Go文件时出错: %v\n", err)
+	}
+
 	// 记录生成历史
 	_, err := g.History.Create(g.Config, g.generatedFiles)
 	if err != nil {
@@ -151,4 +158,36 @@ func ToPlural(s string) string {
 		return s[:len(s)-1] + "ies"
 	}
 	return s + "s"
+}
+
+// FormatGoFiles 对所有生成的Go文件执行go fmt命令
+func (g *Generator) FormatGoFiles() error {
+	// 收集所有生成的.go文件
+	var goFiles []string
+	for filePath := range g.generatedFiles {
+		if filepath.Ext(filePath) == ".go" {
+			// 确保使用完整路径
+			fullPath := filePath
+			if !filepath.IsAbs(filePath) {
+				fullPath = filepath.Join(g.RootPath, filePath)
+			}
+			goFiles = append(goFiles, fullPath)
+		}
+	}
+
+	// 如果没有Go文件，则直接返回
+	if len(goFiles) == 0 {
+		return nil
+	}
+
+	// 对每个文件执行go fmt
+	for _, file := range goFiles {
+		fmt.Printf("执行go fmt: %s\n", file)
+		cmd := exec.Command("go", "fmt", file)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("格式化文件 %s 失败: %w", file, err)
+		}
+	}
+
+	return nil
 }

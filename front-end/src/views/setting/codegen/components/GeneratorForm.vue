@@ -65,24 +65,36 @@
               </n-form-item>
 
               <n-form-item label="表名" path="tableName">
-                <n-input
-                  v-model:value="formData.tableName"
-                  placeholder="请输入表名，如：products"
-                />
+                <n-input-group>
+                  <n-input
+                    v-model:value="formData.tableName"
+                    placeholder="请输入表名，如：products"
+                    style="width: calc(100% - 80px)"
+                  />
+                  <n-button type="primary" style="width: 80px" @click="generateTableName">自动生成</n-button>
+                </n-input-group>
               </n-form-item>
 
               <n-form-item label="描述" path="description">
-                <n-input
-                  v-model:value="formData.description"
-                  placeholder="请输入描述，如：产品"
-                />
+                <n-input-group>
+                  <n-input
+                    v-model:value="formData.description"
+                    placeholder="请输入描述，如：产品"
+                    style="width: calc(100% - 80px)"
+                  />
+                  <n-button type="primary" style="width: 80px" @click="generateDescription">自动生成</n-button>
+                </n-input-group>
               </n-form-item>
 
               <n-form-item label="API前缀" path="apiPrefix">
-                <n-input
-                  v-model:value="formData.apiPrefix"
-                  placeholder="请输入API前缀，如：product"
-                />
+                <n-input-group>
+                  <n-input
+                    v-model:value="formData.apiPrefix"
+                    placeholder="请输入API前缀，如：product"
+                    style="width: calc(100% - 80px)"
+                  />
+                  <n-button type="primary" style="width: 80px" @click="generateApiPrefix">自动生成</n-button>
+                </n-input-group>
               </n-form-item>
 
               <n-form-item label="从数据表导入">
@@ -113,37 +125,49 @@
               label-placement="left"
               label-width="160"
             >
-              <n-form-item-grid :cols="3" :x-gap="12">
-                <n-form-item label="生成列表功能">
-                  <n-switch v-model:value="formData.hasList" />
-                </n-form-item>
+              <n-grid :cols="3" :x-gap="12">
+                <n-grid-item>
+                  <n-form-item label="生成列表功能">
+                    <n-switch v-model:value="formData.hasList" />
+                  </n-form-item>
+                </n-grid-item>
 
-                <n-form-item label="生成创建功能">
-                  <n-switch v-model:value="formData.hasCreate" />
-                </n-form-item>
+                <n-grid-item>
+                  <n-form-item label="生成创建功能">
+                    <n-switch v-model:value="formData.hasCreate" />
+                  </n-form-item>
+                </n-grid-item>
 
-                <n-form-item label="生成更新功能">
-                  <n-switch v-model:value="formData.hasUpdate" />
-                </n-form-item>
+                <n-grid-item>
+                  <n-form-item label="生成更新功能">
+                    <n-switch v-model:value="formData.hasUpdate" />
+                  </n-form-item>
+                </n-grid-item>
 
-                <n-form-item label="生成删除功能">
-                  <n-switch v-model:value="formData.hasDelete" />
-                </n-form-item>
+                <n-grid-item>
+                  <n-form-item label="生成删除功能">
+                    <n-switch v-model:value="formData.hasDelete" />
+                  </n-form-item>
+                </n-grid-item>
 
-                <n-form-item label="生成详情功能">
-                  <n-switch v-model:value="formData.hasDetail" />
-                </n-form-item>
+                <n-grid-item>
+                  <n-form-item label="生成详情功能">
+                    <n-switch v-model:value="formData.hasDetail" />
+                  </n-form-item>
+                </n-grid-item>
 
-                <n-form-item label="启用分页">
-                  <n-switch v-model:value="formData.hasPagination" />
-                </n-form-item>
-              </n-form-item-grid>
+                <n-grid-item>
+                  <n-form-item label="启用分页">
+                    <n-switch v-model:value="formData.hasPagination" />
+                  </n-form-item>
+                </n-grid-item>
+              </n-grid>
             </n-form>
 
             <div class="mt-4">
               <n-alert title="即将生成的文件" type="info">
                 <template #icon>
-                  <n-icon><icon-ic-round-info /></n-icon>
+                  <n-icon><icon-ant-design:info-circle-outlined /></n-icon>
                 </template>
                 <div class="text-sm">
                   <p>模型文件: server/apps/{{ formData.appName || formData.newAppName }}/models/{{ formData.tableName }}.go</p>
@@ -247,34 +271,51 @@
               </n-form-item>
 
               <n-form-item label="数据库字段" path="columnName">
-                <n-input v-model:value="currentField.columnName" placeholder="请输入数据库字段名，如：name" />
+                <n-input-group>
+                  <n-input 
+                    v-model:value="currentField.columnName" 
+                    placeholder="请输入数据库字段名，如：name"
+                    style="width: calc(100% - 80px)"
+                  />
+                  <n-button type="primary" style="width: 80px" @click="generateColumnName">自动生成</n-button>
+                </n-input-group>
               </n-form-item>
 
               <n-form-item label="字段描述" path="fieldDesc">
                 <n-input v-model:value="currentField.fieldDesc" placeholder="请输入字段描述，如：名称" />
               </n-form-item>
 
-              <n-form-item-grid :cols="2" :x-gap="12">
-                <n-form-item label="是否必填">
-                  <n-switch v-model:value="currentField.required" />
-                </n-form-item>
+              <n-grid :cols="2" :x-gap="12">
+                <n-grid-item>
+                  <n-form-item label="是否必填">
+                    <n-switch v-model:value="currentField.required" />
+                  </n-form-item>
+                </n-grid-item>
 
-                <n-form-item label="是否主键">
-                  <n-switch v-model:value="currentField.isPrimaryKey" />
-                </n-form-item>
+                <n-grid-item>
+                  <n-form-item label="是否主键">
+                    <n-switch v-model:value="currentField.isPrimaryKey" />
+                  </n-form-item>
+                </n-grid-item>
 
-                <n-form-item label="可搜索">
-                  <n-switch v-model:value="currentField.isSearchable" />
-                </n-form-item>
+                <n-grid-item>
+                  <n-form-item label="可搜索">
+                    <n-switch v-model:value="currentField.isSearchable" />
+                  </n-form-item>
+                </n-grid-item>
 
-                <n-form-item label="可过滤">
-                  <n-switch v-model:value="currentField.isFilterable" />
-                </n-form-item>
+                <n-grid-item>
+                  <n-form-item label="可过滤">
+                    <n-switch v-model:value="currentField.isFilterable" />
+                  </n-form-item>
+                </n-grid-item>
 
-                <n-form-item label="可排序">
-                  <n-switch v-model:value="currentField.isSortable" />
-                </n-form-item>
-              </n-form-item-grid>
+                <n-grid-item>
+                  <n-form-item label="可排序">
+                    <n-switch v-model:value="currentField.isSortable" />
+                  </n-form-item>
+                </n-grid-item>
+              </n-grid>
             </template>
 
             <!-- 关系字段 -->
@@ -293,6 +334,10 @@
 
               <n-form-item label="字段描述" path="fieldDesc">
                 <n-input v-model:value="currentField.fieldDesc" placeholder="请输入字段描述，如：用户" />
+              </n-form-item>
+              
+              <n-form-item>
+                <n-button type="primary" @click="generateRelationFields">自动生成关系字段</n-button>
               </n-form-item>
 
               <n-form-item label="外键字段" path="foreignKey">
@@ -321,16 +366,40 @@
               <n-form-item label="是否预加载">
                 <n-switch v-model:value="currentField.preload" />
               </n-form-item>
-
-              <n-form-item-grid :cols="2" :x-gap="12">
-                <n-form-item label="可搜索">
-                  <n-switch v-model:value="currentField.isSearchable" />
+              
+              <n-form-item label="支持JOIN查询">
+                <n-switch v-model:value="currentField.joinable" />
+              </n-form-item>
+              
+              <template v-if="currentField.joinable">
+                <n-form-item label="JOIN条件字段" path="joinCondition">
+                  <n-input 
+                    v-model:value="currentField.joinCondition" 
+                    placeholder="请输入JOIN条件字段名，如：name" 
+                  />
                 </n-form-item>
-
-                <n-form-item label="可过滤">
-                  <n-switch v-model:value="currentField.isFilterable" />
+                
+                <n-form-item label="过滤条件字段" path="filterCondition">
+                  <n-input 
+                    v-model:value="currentField.filterCondition" 
+                    placeholder="请输入过滤条件字段名，如：name" 
+                  />
                 </n-form-item>
-              </n-form-item-grid>
+              </template>
+
+              <n-grid :cols="2" :x-gap="12">
+                <n-grid-item>
+                  <n-form-item label="可搜索">
+                    <n-switch v-model:value="currentField.isSearchable" />
+                  </n-form-item>
+                </n-grid-item>
+
+                <n-grid-item>
+                  <n-form-item label="可过滤">
+                    <n-switch v-model:value="currentField.isFilterable" />
+                  </n-form-item>
+                </n-grid-item>
+              </n-grid>
             </template>
           </n-form>
         </n-modal>
@@ -342,8 +411,8 @@
 <script lang="ts" setup>
 import { computed, h, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useMessage } from 'naive-ui';
-import type { FormInst, FormRules, DataTableColumns } from 'naive-ui';
-import { generateCode, getAppList, getColumns, getTables, type ColumnInfo, type FieldInfo } from '@/service/api/codegen';
+import type { FormInst, FormRules, DataTableColumns, DataTableBaseColumn } from 'naive-ui';
+import { generateCode as apiGenerateCode, getAppList, getColumns, getTables, type ColumnInfo, type FieldInfo } from '@/service/api/codegen';
 
 // Props 定义
 const props = defineProps({
@@ -394,6 +463,9 @@ const currentField = reactive<FieldInfo & { _id?: string }>({
   isSearchable: false,
   isFilterable: false,
   isSortable: false,
+  joinable: false,
+  joinCondition: '',
+  filterCondition: '',
   _id: ''
 });
 
@@ -450,10 +522,10 @@ const baseRules: FormRules = {
   newAppName: {
     trigger: ['blur', 'input'],
     validator(rule, value) {
-      if (showNewAppField && !value) {
+      if (showNewAppField.value && !value) {
         return new Error('请输入新应用名称');
       }
-      if (showNewAppField && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(value)) {
+      if (showNewAppField.value && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(value)) {
         return new Error('应用名称只能包含字母、数字和下划线，且以字母开头');
       }
       return true;
@@ -581,8 +653,96 @@ const fieldRules: FormRules = {
 // 消息组件
 const message = useMessage();
 
+// 工具函数：大驼峰转小驼峰
+const toLowerCamel = (str: string) => {
+  if (!str) return '';
+  return str.charAt(0).toLowerCase() + str.slice(1);
+};
+
+// 工具函数：大驼峰转下划线
+const toSnakeCase = (str: string) => {
+  if (!str) return '';
+  return str
+    .replace(/([A-Z])/g, '_$1')
+    .toLowerCase()
+    .replace(/^_/, '');
+};
+
+// 监听结构体名称变化，自动填充表名和API前缀
+watch(
+  () => formData.structName,
+  (newValue) => {
+    // 移除自动填充，让用户自由决定是否使用自动生成的值
+  }
+);
+
+// 移除字段名称自动转换监听器
+// 改为添加辅助函数供模板中的按钮使用
+
+// 自动生成表名函数（供按钮使用）
+function generateTableName() {
+  if (formData.structName) {
+    formData.tableName = toLowerCamel(formData.structName) + 's';
+  }
+}
+
+// 自动生成API前缀函数
+function generateApiPrefix() {
+  if (formData.structName) {
+    formData.apiPrefix = toLowerCamel(formData.structName);
+  }
+}
+
+// 自动生成描述函数
+function generateDescription() {
+  if (formData.structName) {
+    formData.description = formData.structName.replace(/([A-Z])/g, ' $1').trim();
+  }
+}
+
+// 自动生成数据库字段名函数
+function generateColumnName() {
+  if (currentField.fieldName && !currentField.isRelation) {
+    currentField.columnName = toSnakeCase(currentField.fieldName);
+  }
+}
+
+// 监听关系字段类型和关联模型变化，自动生成外键和引用字段
+watch(
+  [() => currentField.isRelation, () => currentField.relationType, () => currentField.relatedModel],
+  ([isRelation, relationType, relatedModel]) => {
+    // 移除自动生成，让用户手动触发
+  }
+);
+
+// 自动生成关系字段的外键和引用字段
+function generateRelationFields() {
+  if (!currentField.isRelation || !currentField.relatedModel) return;
+
+  const relationType = currentField.relationType;
+  const relatedModel = currentField.relatedModel;
+
+  if (relationType === 'belongs_to') {
+    // 从属关系：自动生成外键 (RelatedModelID)
+    currentField.foreignKey = relatedModel + 'ID';
+    currentField.references = 'ID';
+  } else if (relationType === 'has_one' || relationType === 'has_many') {
+    // 拥有关系：自动生成当前结构体ID作为外键
+    if (formData.structName) {
+      currentField.foreignKey = formData.structName + 'ID';
+      currentField.references = 'ID';
+    }
+  } else if (relationType === 'many_to_many') {
+    // 多对多关系：自动生成关联表名
+    if (formData.structName) {
+      const names = [formData.structName, relatedModel].sort();
+      currentField.joinTable = toSnakeCase(names.join('')).toLowerCase();
+    }
+  }
+}
+
 // 字段表格列定义
-const fieldColumns = computed<DataTableColumns>(() => {
+const fieldColumns = computed(() => {
   return [
     { 
       title: '字段名称',
@@ -660,6 +820,22 @@ const fieldColumns = computed<DataTableColumns>(() => {
       }
     },
     {
+      title: '可搜索',
+      key: 'isSearchable',
+      width: 80,
+      render(row) {
+        return row.isSearchable ? '是' : '否';
+      }
+    },
+    {
+      title: '可过滤',
+      key: 'isFilterable',
+      width: 80,
+      render(row) {
+        return row.isFilterable ? '是' : '否';
+      }
+    },
+    {
       title: '操作',
       key: 'actions',
       fixed: 'right',
@@ -685,7 +861,7 @@ const fieldColumns = computed<DataTableColumns>(() => {
         ]);
       }
     }
-  ];
+  ] as DataTableColumns;
 });
 
 // 数据表列定义
@@ -758,12 +934,23 @@ async function loadTables() {
     tablesLoading.value = true;
     const res = await getTables();
     if (res.data) {
-      tableOptions.value = res.data.map(table => ({
-        label: `${table.tableName} (${table.tableComment})`,
-        value: table.tableName
-      }));
+      console.log('获取到表格数据:', JSON.stringify(res.data));
+      
+      tableOptions.value = res.data.map(table => {
+        // 确保表名是字符串
+        const tableName = String(table.tableName || '');
+        const tableComment = String(table.tableComment || '');
+        
+        return {
+          label: tableComment ? `${tableName} (${tableComment})` : tableName,
+          value: tableName
+        };
+      });
+      
+      console.log('处理后的表格选项:', tableOptions.value);
     }
   } catch (error) {
+    console.error('获取表列表失败:', error);
     message.error('获取表列表失败');
   } finally {
     tablesLoading.value = false;
@@ -788,7 +975,7 @@ async function loadColumns(tableName: string) {
 // 应用选择变化
 function onAppChange(value: string) {
   if (value) {
-    showNewAppField = false;
+    showNewAppField.value = false;
   }
   // 自动设置包名
   if (value && !formData.packageName) {
@@ -837,6 +1024,11 @@ function confirmImportTable() {
       structName = structName.slice(0, -1);
     }
     formData.structName = structName;
+    
+    // 自动设置API前缀（小驼峰）
+    if (!formData.apiPrefix) {
+      formData.apiPrefix = toLowerCamel(structName);
+    }
   }
 
   // 字段映射
@@ -859,11 +1051,25 @@ function confirmImportTable() {
       .map(part => part.charAt(0).toUpperCase() + part.slice(1))
       .join('');
 
+    // 智能处理字段描述
+    let fieldDesc = column.columnComment || '';
+    if (!fieldDesc) {
+      // 如果没有注释，根据字段名生成描述
+      fieldDesc = column.columnName
+        .split('_')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+    }
+
+    // 判断是否为外键关系字段
+    const isForeignKey = column.columnName.endsWith('_id') && column.columnName !== 'id';
+    const isPotentialRelation = isForeignKey && !column.columnKey;
+
     return {
       fieldName,
       fieldType,
       columnName: column.columnName,
-      fieldDesc: column.columnComment || column.columnName,
+      fieldDesc: fieldDesc,
       required: column.isNullable === 'NO',
       isPrimaryKey: column.columnKey === 'PRI',
       isSearchable: column.columnKey === 'PRI' || column.columnName.includes('name') || column.columnName.includes('title'),
@@ -908,6 +1114,9 @@ function addField() {
     references: '',
     preload: false,
     joinTable: '',
+    joinable: false,
+    joinCondition: '',
+    filterCondition: '',
 
     _id: `field_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   });
@@ -943,6 +1152,7 @@ function confirmField() {
   fieldFormRef.value?.validate((errors) => {
     if (errors) return;
     
+    // 创建基本字段对象
     const field = {
       fieldName: currentField.fieldName,
       fieldType: currentField.fieldType,
@@ -954,7 +1164,27 @@ function confirmField() {
       isFilterable: currentField.isFilterable,
       isSortable: currentField.isSortable,
       _id: currentField._id || `field_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    };
+    } as (FieldInfo & { _id: string });
+    
+    // 添加关系字段属性
+    if (currentField.isRelation) {
+      field.isRelation = true;
+      field.relationType = currentField.relationType;
+      field.relatedModel = currentField.relatedModel;
+      field.foreignKey = currentField.foreignKey;
+      field.references = currentField.references;
+      field.preload = currentField.preload;
+      
+      // 添加JOIN查询相关属性
+      field.joinable = currentField.joinable;
+      field.joinCondition = currentField.joinCondition;
+      field.filterCondition = currentField.filterCondition;
+      
+      // 对于多对多关系，添加关联表属性
+      if (currentField.relationType === 'many_to_many') {
+        field.joinTable = currentField.joinTable;
+      }
+    }
     
     if (fieldEditIndex.value >= 0) {
       // 更新字段
@@ -1062,11 +1292,22 @@ async function generateCode() {
         isPrimaryKey: field.isPrimaryKey,
         isSearchable: field.isSearchable,
         isFilterable: field.isFilterable,
-        isSortable: field.isSortable
+        isSortable: field.isSortable,
+        // 添加关系字段属性
+        isRelation: field.isRelation,
+        relationType: field.relationType,
+        relatedModel: field.relatedModel,
+        foreignKey: field.foreignKey,
+        references: field.references,
+        preload: field.preload,
+        joinTable: field.joinTable,
+        joinable: field.joinable,
+        joinCondition: field.joinCondition,
+        filterCondition: field.filterCondition
       }))
     };
     
-    await generateCode(requestData);
+    await apiGenerateCode(requestData);
     message.success('代码生成成功');
     emit('success');
   } catch (error) {
@@ -1100,7 +1341,7 @@ function resetForm() {
     fields: []
   });
   
-  showNewAppField = false;
+  showNewAppField.value = false;
   
   nextTick(() => {
     baseFormRef.value?.restoreValidation();

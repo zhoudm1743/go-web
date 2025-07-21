@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
+	"unicode"
 )
 
 // generateModel 生成模型文件
@@ -15,7 +17,6 @@ func (g *Generator) generateModel() error {
 
 import (
 	"time"
-	"github.com/zhoudm1743/go-web/core/facades"
 	"gorm.io/gorm"
 )
 
@@ -36,7 +37,7 @@ func ({{.StructName}}) TableName() string {
 }
 
 {{if .HasRelations}}
-// 关系预加载
+// LoadRelations 关系预加载
 func (m *{{.StructName}}) LoadRelations(db *gorm.DB) *gorm.DB {
 	query := db
 	{{range .PreloadFields}}
@@ -81,43 +82,96 @@ func (m *{{.StructName}}) LoadRelations(db *gorm.DB) *gorm.DB {
 			// 根据关系类型生成字段
 			switch field.RelationType {
 			case BelongsTo:
-				// belongsTo关系: Post belongs to User
-				// Post有一个UserID外键，引用User的ID
-				fieldType = field.RelatedModel
-				gormTag = fmt.Sprintf(`json:"%s"`, ToLowerCamel(field.FieldName))
+				// belongsTo关系: Post belongs to Category
+				// Post有一个CategoryID外键，引用Category的ID
+				// 构建字段名和标签
 
-				// 添加外键字段
+				// 获取关联模型字段和外键字段名
+				relationFieldName := field.FieldName // 关联模型字段名，例如"Category"
+				foreignKeyFieldName := ""
+
 				if field.ForeignKey != "" {
-					// 使用自定义外键
-					fkFieldName := field.ForeignKey
-					data.Fields = append(data.Fields, FieldData{
-						FieldName: fkFieldName,
-						FieldType: "uint",
-						GormTag:   fmt.Sprintf(`gorm:"column:%s" json:"%s"`, ToSnakeCase(fkFieldName), ToLowerCamel(fkFieldName)),
-						FieldDesc: fmt.Sprintf("%s外键", field.RelatedModel),
-					})
+					foreignKeyFieldName = field.ForeignKey // 自定义外键字段名
 				} else {
-					// 使用默认外键命名
-					fkFieldName := field.FieldName + "ID"
-					data.Fields = append(data.Fields, FieldData{
-						FieldName: fkFieldName,
-						FieldType: "uint",
-						GormTag:   fmt.Sprintf(`gorm:"column:%s" json:"%s"`, ToSnakeCase(fkFieldName), ToLowerCamel(fkFieldName)),
-						FieldDesc: fmt.Sprintf("%s外键", field.RelatedModel),
-					})
+					foreignKeyFieldName = relationFieldName + "ID" // 默认外键字段名，如"CategoryID"
 				}
+
+				// 生成外键列名，特殊处理ID结尾的情况
+				var foreignKeyColumnName string
+
+				// 检查是否以ID结尾，特殊处理
+				if strings.HasSuffix(foreignKeyFieldName, "ID") && foreignKeyFieldName != "ID" {
+					// 移除ID后缀
+					base := foreignKeyFieldName[:len(foreignKeyFieldName)-2]
+
+					// 处理基础部分转为蛇形命名
+					for i, c := range base {
+						if i > 0 && unicode.IsUpper(c) {
+							foreignKeyColumnName += "_"
+						}
+						foreignKeyColumnName += string(unicode.ToLower(c))
+					}
+
+					// 添加_id后缀
+					foreignKeyColumnName += "_id"
+				} else if foreignKeyFieldName == "ID" {
+					// ID直接转换为id
+					foreignKeyColumnName = "id"
+				} else {
+					// 常规处理
+					for i, c := range foreignKeyFieldName {
+						if i > 0 && unicode.IsUpper(c) {
+							foreignKeyColumnName += "_"
+						}
+						foreignKeyColumnName += string(unicode.ToLower(c))
+					}
+				}
+
+				// 关联模型字段
+				relationFieldType := "*" + field.RelatedModel // 使用指针类型
+				relationFieldGormTag := ""
 
 				// 添加关系配置
-				if field.ForeignKey != "" && field.References != "" {
-					gormTag = fmt.Sprintf(`gorm:"foreignKey:%s;references:%s" json:"%s"`, field.ForeignKey, field.References, ToLowerCamel(field.FieldName))
-				} else if field.ForeignKey != "" {
-					gormTag = fmt.Sprintf(`gorm:"foreignKey:%s" json:"%s"`, field.ForeignKey, ToLowerCamel(field.FieldName))
+				if field.References != "" {
+					relationFieldGormTag = fmt.Sprintf(`gorm:"foreignKey:%s;references:%s" json:"%s"`,
+						foreignKeyFieldName, field.References, ToLowerCamel(relationFieldName))
+				} else {
+					relationFieldGormTag = fmt.Sprintf(`json:"%s"`, ToLowerCamel(relationFieldName))
 				}
+
+				// 添加关联模型字段
+				data.Fields = append(data.Fields, FieldData{
+					FieldName: relationFieldName, // 这里是关系字段名，例如"Category"
+					FieldType: relationFieldType, // 类型是指针类型，例如"*Category"
+					GormTag:   relationFieldGormTag,
+					FieldDesc: field.FieldDesc,
+				})
+
+				// 添加外键字段
+				data.Fields = append(data.Fields, FieldData{
+					FieldName: foreignKeyFieldName, // 这里是外键字段名，例如"CategoryID"
+					FieldType: "uint",              // 使用uint类型，应与被引用字段类型一致(通常是主键ID)
+					GormTag:   fmt.Sprintf(`gorm:"column:%s" json:"%s"`, foreignKeyColumnName, ToLowerCamel(foreignKeyFieldName)),
+					FieldDesc: fmt.Sprintf("%s外键", field.RelatedModel),
+				})
+
+				// 记录这是一个关系字段
+				data.HasRelations = true
+
+				// 如果需要预加载
+				if field.Preload {
+					data.PreloadFields = append(data.PreloadFields, struct{ FieldName string }{
+						FieldName: relationFieldName, // 预加载字段名是关系字段名，不是外键名
+					})
+				}
+
+				// 已经处理了belongsTo关系，直接跳到下一个字段
+				continue
 
 			case HasOne:
 				// hasOne关系: User has one Profile
 				// Profile有一个UserID外键，引用User的ID
-				fieldType = field.RelatedModel
+				fieldType = "*" + field.RelatedModel // 使用指针类型
 				gormTag = fmt.Sprintf(`json:"%s"`, ToLowerCamel(field.FieldName))
 
 				// 添加关系配置
@@ -182,9 +236,19 @@ func (m *{{.StructName}}) LoadRelations(db *gorm.DB) *gorm.DB {
 				if field.FieldName == "ID" {
 					continue
 				}
-				gormTag = fmt.Sprintf(`gorm:"primaryKey;column:%s" json:"%s"`, field.ColumnName, ToLowerCamel(field.FieldName))
+				// 确保column名称不为空
+				columnName := field.ColumnName
+				if columnName == "" {
+					columnName = ToSnakeCase(field.FieldName)
+				}
+				gormTag = fmt.Sprintf(`gorm:"primaryKey;column:%s" json:"%s"`, columnName, ToLowerCamel(field.FieldName))
 			} else {
-				gormTag = fmt.Sprintf(`gorm:"column:%s" json:"%s"`, field.ColumnName, ToLowerCamel(field.FieldName))
+				// 确保column名称不为空
+				columnName := field.ColumnName
+				if columnName == "" {
+					columnName = ToSnakeCase(field.FieldName)
+				}
+				gormTag = fmt.Sprintf(`gorm:"column:%s" json:"%s"`, columnName, ToLowerCamel(field.FieldName))
 			}
 
 			data.Fields = append(data.Fields, FieldData{
@@ -209,7 +273,8 @@ func (m *{{.StructName}}) LoadRelations(db *gorm.DB) *gorm.DB {
 	}
 
 	// 确保目录存在
-	dir := filepath.Join(g.RootPath, "server/apps/admin/models")
+	appDir := filepath.Join(g.RootPath, "server/apps", g.Config.PackageName)
+	dir := filepath.Join(appDir, "models")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("创建目录失败: %w", err)
 	}

@@ -1,5 +1,9 @@
 package generator
 
+import (
+	"strings"
+)
+
 // Config 代码生成器配置
 type Config struct {
 	// 基本信息
@@ -25,7 +29,7 @@ type Config struct {
 	Fields []*Field
 }
 
-// Field 字段定义
+// Field 字段配置
 type Field struct {
 	FieldName    string // 结构体字段名称
 	FieldType    string // Go类型
@@ -46,6 +50,11 @@ type Field struct {
 	References   string       // 引用字段 (关联模型字段)
 	Preload      bool         // 是否预加载
 	JoinTable    string       // 多对多关联表名
+
+	// JOIN查询相关
+	Joinable        bool   // 是否支持JOIN查询
+	JoinCondition   string // JOIN条件字段
+	FilterCondition string // 过滤条件字段
 }
 
 // RelationType 关系类型枚举
@@ -80,21 +89,48 @@ type ColumnInfo struct {
 
 // ConvertDataTypeToGo 将数据库类型转换为Go类型
 func ConvertDataTypeToGo(dataType string) string {
+	dataType = strings.ToLower(dataType)
+
 	switch {
-	case dataType == "tinyint(1)":
+	// Boolean类型
+	case dataType == "tinyint(1)" || dataType == "boolean" || dataType == "bool":
 		return "bool"
-	case dataType == "tinyint", dataType == "smallint", dataType == "mediumint", dataType == "int":
+
+	// 整数类型
+	case strings.Contains(dataType, "int") && !strings.Contains(dataType, "point"):
+		if strings.Contains(dataType, "big") || strings.Contains(dataType, "int8") {
+			return "int64"
+		}
 		return "int"
-	case dataType == "bigint":
-		return "int64"
-	case dataType == "float", dataType == "double", dataType == "decimal":
+
+	// 浮点类型
+	case dataType == "float" || dataType == "double" || dataType == "decimal" ||
+		dataType == "numeric" || dataType == "real" || strings.Contains(dataType, "float"):
 		return "float64"
-	case dataType == "char", dataType == "varchar", dataType == "text", dataType == "mediumtext", dataType == "longtext":
+
+	// 字符串类型
+	case dataType == "char" || dataType == "varchar" || dataType == "text" ||
+		dataType == "mediumtext" || dataType == "longtext" ||
+		dataType == "character varying" || dataType == "character" ||
+		strings.Contains(dataType, "char") || strings.Contains(dataType, "text"):
 		return "string"
-	case dataType == "date", dataType == "datetime", dataType == "timestamp":
+
+	// 时间类型
+	case dataType == "date" || dataType == "datetime" || dataType == "timestamp" ||
+		strings.Contains(dataType, "time") || strings.Contains(dataType, "date"):
 		return "time.Time"
-	case dataType == "json":
+
+	// JSON类型
+	case dataType == "json" || dataType == "jsonb":
 		return "json.RawMessage"
+
+	// 二进制类型
+	case dataType == "blob" || dataType == "bytea" || dataType == "binary" ||
+		dataType == "varbinary" || strings.Contains(dataType, "blob") ||
+		strings.Contains(dataType, "binary"):
+		return "[]byte"
+
+	// 默认使用string
 	default:
 		return "string"
 	}

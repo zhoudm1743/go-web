@@ -11,20 +11,37 @@ import (
 
 // generateFrontend 生成前端代码
 func (g *Generator) generateFrontend() error {
+	// 检查并修正前端路径
+	frontendRootPath := filepath.Join(g.RootPath, "front-end")
+	if _, err := os.Stat(frontendRootPath); os.IsNotExist(err) {
+		// 如果front-end目录不存在，可能路径有误，尝试查找正确路径
+		fmt.Printf("前端路径不存在: %s，尝试查找正确路径\n", frontendRootPath)
+
+		// 尝试从RootPath的父目录查找
+		parentPath := filepath.Dir(g.RootPath)
+		altPath := filepath.Join(parentPath, "front-end")
+		if _, err := os.Stat(altPath); err == nil {
+			frontendRootPath = altPath
+			fmt.Printf("找到前端路径: %s\n", frontendRootPath)
+		}
+	}
+
 	// 创建前端目录
-	frontendDir := filepath.Join(g.RootPath, "front-end/src/views", strings.ToLower(g.Config.StructName))
-	if err := os.MkdirAll(frontendDir, 0755); err != nil {
+	viewsDir := filepath.Join(frontendRootPath, "src/views", strings.ToLower(g.Config.StructName))
+	fmt.Printf("创建前端视图目录: %s\n", viewsDir)
+
+	if err := os.MkdirAll(viewsDir, 0755); err != nil {
 		return fmt.Errorf("创建前端目录失败: %w", err)
 	}
 
 	// 创建组件目录
-	componentsDir := filepath.Join(frontendDir, "components")
+	componentsDir := filepath.Join(viewsDir, "components")
 	if err := os.MkdirAll(componentsDir, 0755); err != nil {
 		return fmt.Errorf("创建组件目录失败: %w", err)
 	}
 
 	// 生成索引页面
-	if err := g.generateIndexPage(frontendDir); err != nil {
+	if err := g.generateIndexPage(viewsDir); err != nil {
 		return err
 	}
 
@@ -52,7 +69,7 @@ func (g *Generator) generateIndexPage(dir string) error {
     <template #buttons>
       <n-button type="primary" @click="handleAdd">
         <template #icon>
-          <icon-ic-round-plus />
+          <icon-mdi:plus-circle />
         </template>
         新增{{ .Description }}
       </n-button>
@@ -663,7 +680,23 @@ export const delete{{.StructName}} = (id: number) => {
 	}
 
 	// 确保目录存在
-	apiDir := filepath.Join(g.RootPath, "front-end/src/service/api")
+	// 使用与generateFrontend相同的前端路径检测逻辑
+	frontendRootPath := filepath.Join(g.RootPath, "front-end")
+	if _, err := os.Stat(frontendRootPath); os.IsNotExist(err) {
+		// 如果front-end目录不存在，可能路径有误，尝试查找正确路径
+		fmt.Printf("前端路径不存在: %s，尝试查找正确路径\n", frontendRootPath)
+
+		// 尝试从RootPath的父目录查找
+		parentPath := filepath.Dir(g.RootPath)
+		altPath := filepath.Join(parentPath, "front-end")
+		if _, err := os.Stat(altPath); err == nil {
+			frontendRootPath = altPath
+			fmt.Printf("找到前端路径: %s\n", frontendRootPath)
+		}
+	}
+
+	apiDir := filepath.Join(frontendRootPath, "src/service/api")
+	fmt.Printf("API目录路径: %s\n", apiDir)
 	if err := os.MkdirAll(apiDir, 0755); err != nil {
 		return fmt.Errorf("创建API目录失败: %w", err)
 	}

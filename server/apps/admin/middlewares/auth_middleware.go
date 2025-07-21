@@ -37,7 +37,7 @@ func AdminAuth() gin.HandlerFunc {
 		roles := admin.GetRoles()
 		isAdmin := false
 		for _, role := range roles {
-			if role == "admin" {
+			if role == "super" { // 修改为检查 "super" 角色
 				isAdmin = true
 				break
 			}

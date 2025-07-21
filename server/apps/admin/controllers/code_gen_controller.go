@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,9 +22,40 @@ func NewCodeGenController() *CodeGenController {
 
 // GetApps 获取应用列表
 func (c *CodeGenController) GetApps(ctx *gin.Context) {
-	// 获取apps目录下的所有目录作为应用列表
-	appsDir := "./server/apps"
-	files, err := ioutil.ReadDir(appsDir)
+	// 获取工作目录
+	workDir, err := os.Getwd()
+	if err != nil {
+		response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取工作目录失败: %v", err))
+		return
+	}
+
+	// 检查可能的应用目录路径
+	possiblePaths := []string{
+		"apps",                          // 如果当前目录是server
+		filepath.Join("server", "apps"), // 如果当前目录是项目根目录
+	}
+
+	var appsDir string
+	var pathErr error
+
+	for _, path := range possiblePaths {
+		testPath := filepath.Join(workDir, path)
+		if _, err := os.Stat(testPath); err == nil {
+			appsDir = testPath
+			pathErr = nil
+			break
+		} else {
+			pathErr = err
+		}
+	}
+
+	// 如果找不到有效路径，返回最后一个错误
+	if appsDir == "" {
+		response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取应用列表失败: %v", pathErr))
+		return
+	}
+
+	files, err := os.ReadDir(appsDir)
 	if err != nil {
 		response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取应用列表失败: %v", err))
 		return
@@ -45,28 +75,109 @@ func (c *CodeGenController) GetApps(ctx *gin.Context) {
 // GetTables 获取数据库表列表
 func (c *CodeGenController) GetTables(ctx *gin.Context) {
 	db := facades.DB()
-	var tables []generator.TableInfo
 
-	// 使用数据库原始查询
-	// MySQL 查询
-	query := `
-		SELECT 
-			table_name as tableName,
-			table_comment as tableComment 
-		FROM 
-			information_schema.tables 
-		WHERE 
-			table_schema = DATABASE() 
-		ORDER BY 
-			table_name
-	`
+	// 检测数据库类型，针对不同类型的数据库使用不同的查询语句
+	dialect := db.Dialector.Name()
+	fmt.Printf("当前数据库类型: %s\n", dialect)
 
-	if err := db.Raw(query).Scan(&tables).Error; err != nil {
-		response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取表列表失败: %v", err))
-		return
+	switch {
+	case dialect == "sqlite" || dialect == "sqlite3":
+		// 对于SQLite，直接查询表名，然后手动构建结果
+		var tableNames []string
+		query := `
+			SELECT 
+				name
+			FROM 
+				sqlite_master 
+			WHERE 
+				type = 'table' AND 
+				name NOT LIKE 'sqlite_%' AND
+				name NOT LIKE '%casbin%'
+			ORDER BY 
+				name
+		`
+
+		if err := db.Raw(query).Scan(&tableNames).Error; err != nil {
+			response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取表列表失败: %v", err))
+			return
+		}
+
+		// 手动构建结果数组
+		tables := make([]generator.TableInfo, 0, len(tableNames))
+		for _, name := range tableNames {
+			tables = append(tables, generator.TableInfo{
+				TableName:    name,
+				TableComment: "",
+			})
+		}
+
+		// 添加调试信息
+		fmt.Printf("数据库类型: %s, 查询到 %d 个表:\n", dialect, len(tables))
+		for i, table := range tables {
+			fmt.Printf("  %d. 表名: %s\n", i+1, table.TableName)
+		}
+
+		response.OkWithData(ctx, tables)
+
+	case dialect == "postgres" || dialect == "postgresql":
+		// PostgreSQL查询
+		var tables []generator.TableInfo
+		query := `
+			SELECT 
+				table_name AS "tableName",
+				obj_description((quote_ident(table_name)::text)::regclass, 'pg_class') AS "tableComment"
+			FROM 
+				information_schema.tables 
+			WHERE 
+				table_schema = 'public' AND 
+				table_type = 'BASE TABLE' AND
+				table_name NOT LIKE 'pg_%' AND
+				table_name NOT LIKE '%casbin%'
+			ORDER BY 
+				table_name
+		`
+
+		if err := db.Raw(query).Scan(&tables).Error; err != nil {
+			response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取表列表失败: %v", err))
+			return
+		}
+
+		// 添加调试信息
+		fmt.Printf("数据库类型: %s, 查询到 %d 个表:\n", dialect, len(tables))
+		for i, table := range tables {
+			fmt.Printf("  %d. 表名: %s, 注释: %s\n", i+1, table.TableName, table.TableComment)
+		}
+
+		response.OkWithData(ctx, tables)
+
+	default: // MySQL和其他数据库
+		// MySQL查询
+		var tables []generator.TableInfo
+		query := `
+			SELECT 
+				table_name AS "tableName",
+				table_comment AS "tableComment" 
+			FROM 
+				information_schema.tables 
+			WHERE 
+				table_schema = DATABASE() 
+			ORDER BY 
+				table_name
+		`
+
+		if err := db.Raw(query).Scan(&tables).Error; err != nil {
+			response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取表列表失败: %v", err))
+			return
+		}
+
+		// 添加调试信息
+		fmt.Printf("数据库类型: %s, 查询到 %d 个表:\n", dialect, len(tables))
+		for i, table := range tables {
+			fmt.Printf("  %d. 表名: %s, 注释: %s\n", i+1, table.TableName, table.TableComment)
+		}
+
+		response.OkWithData(ctx, tables)
 	}
-
-	response.OkWithData(ctx, tables)
 }
 
 // GetColumns 获取表字段
@@ -78,31 +189,148 @@ func (c *CodeGenController) GetColumns(ctx *gin.Context) {
 	}
 
 	db := facades.DB()
-	var columns []generator.ColumnInfo
 
-	// MySQL 查询
-	query := `
-		SELECT 
-			column_name as columnName,
-			data_type as dataType,
-			column_comment as columnComment,
-			is_nullable as isNullable,
-			column_key as columnKey
-		FROM 
-			information_schema.columns 
-		WHERE 
-			table_schema = DATABASE() 
-			AND table_name = ? 
-		ORDER BY 
-			ordinal_position
-	`
+	// 检测数据库类型，针对不同类型的数据库使用不同的查询语句
+	dialect := db.Dialector.Name()
+	fmt.Printf("当前数据库类型: %s\n", dialect)
 
-	if err := db.Raw(query, tableName).Scan(&columns).Error; err != nil {
-		response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取表字段失败: %v", err))
-		return
+	switch {
+	case dialect == "sqlite" || dialect == "sqlite3":
+		// SQLite查询 - 使用pragma_table_info获取表结构
+		type SqliteColumnInfo struct {
+			Cid       int         `gorm:"column:cid"`
+			Name      string      `gorm:"column:name"`
+			Type      string      `gorm:"column:type"`
+			NotNull   int         `gorm:"column:notnull"`
+			DfltValue interface{} `gorm:"column:dflt_value"`
+			Pk        int         `gorm:"column:pk"`
+		}
+
+		var sqliteColumns []SqliteColumnInfo
+		query := `
+			SELECT 
+				cid, name, type, "notnull", dflt_value, pk
+			FROM 
+				pragma_table_info(?)
+			ORDER BY 
+				cid
+		`
+
+		if err := db.Raw(query, tableName).Scan(&sqliteColumns).Error; err != nil {
+			response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取表字段失败: %v", err))
+			return
+		}
+
+		// 转换为通用列信息格式
+		columns := make([]generator.ColumnInfo, 0, len(sqliteColumns))
+		for _, col := range sqliteColumns {
+			isNullable := "YES"
+			if col.NotNull == 1 {
+				isNullable = "NO"
+			}
+
+			columnKey := ""
+			if col.Pk == 1 {
+				columnKey = "PRI"
+			}
+
+			columns = append(columns, generator.ColumnInfo{
+				ColumnName:    col.Name,
+				DataType:      col.Type,
+				ColumnComment: "", // SQLite不支持列注释
+				IsNullable:    isNullable,
+				ColumnKey:     columnKey,
+			})
+		}
+
+		// 添加调试信息
+		fmt.Printf("表 %s 的字段信息 (%d 个):\n", tableName, len(columns))
+		for i, col := range columns {
+			fmt.Printf("  %d. 字段名: %s, 类型: %s, 主键: %s, 可空: %s\n",
+				i+1, col.ColumnName, col.DataType, col.ColumnKey, col.IsNullable)
+		}
+
+		response.OkWithData(ctx, columns)
+
+	case dialect == "postgres" || dialect == "postgresql":
+		// PostgreSQL查询
+		var columns []generator.ColumnInfo
+		query := `
+			SELECT 
+				column_name AS "columnName",
+				data_type AS "dataType",
+				col_description(
+					(table_schema || '.' || table_name)::regclass::oid, 
+					ordinal_position
+				) AS "columnComment",
+				is_nullable AS "isNullable",
+				CASE 
+					WHEN EXISTS (
+						SELECT 1 FROM information_schema.table_constraints tc
+						JOIN information_schema.constraint_column_usage ccu 
+						ON tc.constraint_name = ccu.constraint_name AND tc.table_schema = ccu.table_schema
+						WHERE tc.constraint_type = 'PRIMARY KEY' 
+						AND tc.table_name = ? 
+						AND ccu.column_name = c.column_name
+					) THEN 'PRI'
+					ELSE ''
+				END AS "columnKey"
+			FROM 
+				information_schema.columns c
+			WHERE 
+				table_schema = 'public' 
+				AND table_name = ? 
+			ORDER BY 
+				ordinal_position
+		`
+
+		if err := db.Raw(query, tableName, tableName).Scan(&columns).Error; err != nil {
+			response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取表字段失败: %v", err))
+			return
+		}
+
+		// 添加调试信息
+		fmt.Printf("表 %s 的字段信息 (%d 个):\n", tableName, len(columns))
+		for i, col := range columns {
+			fmt.Printf("  %d. 字段名: %s, 类型: %s, 主键: %s, 可空: %s\n",
+				i+1, col.ColumnName, col.DataType, col.ColumnKey, col.IsNullable)
+		}
+
+		response.OkWithData(ctx, columns)
+
+	default: // MySQL和其他数据库
+		// MySQL查询
+		var columns []generator.ColumnInfo
+		query := `
+			SELECT 
+				column_name AS "columnName",
+				data_type AS "dataType",
+				column_comment AS "columnComment",
+				is_nullable AS "isNullable",
+				column_key AS "columnKey"
+			FROM 
+				information_schema.columns 
+			WHERE 
+				table_schema = DATABASE() 
+				AND table_name = ? 
+			ORDER BY 
+				ordinal_position
+		`
+
+		if err := db.Raw(query, tableName).Scan(&columns).Error; err != nil {
+			response.FailWithMsg(ctx, response.SystemError, fmt.Sprintf("获取表字段失败: %v", err))
+			return
+		}
+
+		// 添加调试信息
+		fmt.Printf("表 %s 的字段信息 (%d 个):\n", tableName, len(columns))
+		for i, col := range columns {
+			fmt.Printf("  %d. 字段名: %s, 类型: %s, 主键: %s, 可空: %s\n",
+				i+1, col.ColumnName, col.DataType, col.ColumnKey, col.IsNullable)
+		}
+
+		response.OkWithData(ctx, columns)
 	}
-
-	response.OkWithData(ctx, columns)
 }
 
 // Generate 生成代码
@@ -164,6 +392,16 @@ func (c *CodeGenController) Generate(ctx *gin.Context) {
 
 	// 设置项目根目录和应用目录
 	rootPath := "./"
+	// 如果当前目录是server，则需要返回上一级
+	if curDir, err := os.Getwd(); err == nil {
+		if filepath.Base(curDir) == "server" {
+			// 如果当前在server目录下，需要返回上一级
+			rootPath = "../"
+			fmt.Printf("当前目录是server，设置rootPath为: %s\n", rootPath)
+		} else {
+			fmt.Printf("当前工作目录: %s\n", curDir)
+		}
+	}
 	appPath := filepath.Join("server/apps", req.AppName)
 
 	// 检查应用目录是否存在，如果不存在则创建

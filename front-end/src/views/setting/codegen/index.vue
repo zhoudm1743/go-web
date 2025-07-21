@@ -1,17 +1,15 @@
 <template>
-  <CommonWrapper>
-    <template #title> 代码生成器 </template>
-
-    <template #buttons>
+  <n-card>
+    <template #header>代码生成器</template>
+    <template #header-extra>
       <n-button type="primary" @click="openGeneratorForm">
         <template #icon>
-          <icon-ic-round-plus />
+          <icon-mdi:plus-circle />
         </template>
         创建新代码
       </n-button>
     </template>
-
-    <template #content>
+      
       <!-- 选项卡 -->
       <n-tabs type="line" animated v-model:value="activeTab">
         <n-tab-pane name="generator" tab="代码生成器">
@@ -42,19 +40,18 @@
           <HistoryList ref="historyListRef" :on-refresh="refreshForm" />
         </n-tab-pane>
       </n-tabs>
-    </template>
-  </CommonWrapper>
+  </n-card>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { useMessage } from 'naive-ui';
-import { CommonWrapper } from '@/components/common';
 import GeneratorForm from './components/GeneratorForm.vue';
 import HistoryList from './components/HistoryList.vue';
 
 // 消息组件
 const message = useMessage();
+
 
 // 当前选中的标签
 const activeTab = ref('generator');

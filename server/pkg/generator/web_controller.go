@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"strconv"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zhoudm1743/go-web/core/response"
@@ -266,5 +267,19 @@ func (c *CodeGenController) RegisterRoutes(router *gin.RouterGroup) {
 
 // ToSnakeCase 将驼峰命名转换为蛇形命名
 func ToSnakeCase(s string) string {
-	return ToLowerCamel(s)
+	if s == "" {
+		return s
+	}
+	var result []rune
+	for i, r := range s {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				result = append(result, '_')
+			}
+			result = append(result, unicode.ToLower(r))
+		} else {
+			result = append(result, r)
+		}
+	}
+	return string(result)
 }

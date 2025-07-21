@@ -15,11 +15,12 @@ func RegisterRoutes(r *gin.RouterGroup) {
 	roleController := controllers.NewRoleController()
 	codeGenController := controllers.NewCodeGenController()
 
-	// 公开路由
-	publicRoutes := r.Group("/admin")
+	publicRoutes := r
 	{
 		// 认证相关路由
 		publicRoutes.POST("/login", authController.Login)
+		publicRoutes.GET("/getAllRoutes", authController.GetAllRoutes)
+		publicRoutes.GET("/getUserRoutes", authController.GetUserRoutes)
 		// publicRoutes.POST("/refresh", authController.RefreshToken)
 	}
 
@@ -53,5 +54,6 @@ func RegisterRoutes(r *gin.RouterGroup) {
 
 		// 代码生成器路由
 		codeGenController.RegisterRoutes(privateRoutes)
+
 	}
 }

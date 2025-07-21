@@ -61,9 +61,22 @@ func (c *{{.StructName}}Controller) Get{{.PluralName}}(ctx *gin.Context) {
 	{{end}}
 
 	{{if .HasRelations}}
+	// 应用关联表查询
+	{{range .JoinFields}}
+	if params.{{.RelatedFieldName}}Filter != "" {
+		query = query.Joins("JOIN {{.JoinTable}} ON {{.JoinCondition}}").
+			Where("{{.FilterCondition}} = ?", params.{{.RelatedFieldName}}Filter)
+	}
+	{{end}}
+	
 	// 应用预加载
 	if params.WithRelations {
 		query = (&models.{{.StructName}}{}).LoadRelations(query)
+	} else {
+		// 默认预加载关键关联
+		{{range .PreloadFields}}
+		query = query.Preload("{{.FieldName}}")
+		{{end}}
 	}
 	{{end}}
 
@@ -116,7 +129,7 @@ func (c *{{.StructName}}Controller) Get{{.StructName}}(ctx *gin.Context) {
 	db := facades.DB()
 	var item models.{{.StructName}}
 	
-	query := db
+	query := db{{range .PreloadFields}}.Preload("{{.FieldName}}"){{end}}
 	{{if .HasRelations}}
 	// 预加载关联数据
 	withRelations := ctx.Query("withRelations")
@@ -235,18 +248,34 @@ func (c *{{.StructName}}Controller) Delete{{.StructName}}(ctx *gin.Context) {
 
 	type TemplateData struct {
 		*Config
-		PluralName   string
-		QueryFields  []FieldData
-		UpdateFields []FieldData
-		HasRelations bool
+		PluralName    string
+		QueryFields   []FieldData
+		UpdateFields  []FieldData
+		HasRelations  bool
+		PreloadFields []struct {
+			FieldName string
+		}
+		JoinFields []struct {
+			RelatedFieldName string
+			JoinTable        string
+			JoinCondition    string
+			FilterCondition  string
+		}
 	}
 
 	data := TemplateData{
-		Config:       g.Config,
-		PluralName:   ToPlural(g.Config.StructName),
-		QueryFields:  make([]FieldData, 0),
-		UpdateFields: make([]FieldData, 0),
-		HasRelations: false,
+		Config:        g.Config,
+		PluralName:    ToPlural(g.Config.StructName),
+		QueryFields:   make([]FieldData, 0),
+		UpdateFields:  make([]FieldData, 0),
+		HasRelations:  false,
+		PreloadFields: make([]struct{ FieldName string }, 0),
+		JoinFields: make([]struct {
+			RelatedFieldName string
+			JoinTable        string
+			JoinCondition    string
+			FilterCondition  string
+		}, 0),
 	}
 
 	// 处理字段
@@ -254,6 +283,61 @@ func (c *{{.StructName}}Controller) Delete{{.StructName}}(ctx *gin.Context) {
 		// 检查是否有关系字段
 		if field.IsRelation {
 			data.HasRelations = true
+
+			// 添加到预加载字段列表
+			// 仅当字段设置了预加载选项时才添加到预加载列表
+			if field.Preload {
+				// 预加载的字段名应该是关系字段名(FieldName)，不是外键名称
+				data.PreloadFields = append(data.PreloadFields, struct{ FieldName string }{
+					FieldName: field.FieldName,
+				})
+			}
+
+			// 为BelongsTo和HasOne关系添加JOIN支持
+			if (field.RelationType == BelongsTo || field.RelationType == HasOne) && field.Joinable {
+				// 确定外键和引用字段
+				foreignKey := field.ForeignKey
+				references := field.References
+
+				if foreignKey == "" {
+					// 默认外键命名：关联模型名+ID
+					foreignKey = field.RelatedModel + "ID"
+				}
+
+				if references == "" {
+					// 默认引用字段：ID
+					references = "ID"
+				}
+
+				// 获取表名
+				mainTable := g.Config.TableName
+				relatedTable := ToSnakeCase(field.RelatedModel) + "s" // 假设表名是模型名的复数形式
+
+				// 生成JOIN条件
+				joinCondition := fmt.Sprintf("%s.%s = %s.%s", mainTable, ToSnakeCase(foreignKey), relatedTable, ToSnakeCase(references))
+				if field.JoinCondition != "" {
+					joinCondition = field.JoinCondition
+				}
+
+				// 生成过滤条件
+				filterCondition := fmt.Sprintf("%s.name", relatedTable) // 默认过滤字段为name
+				if field.FilterCondition != "" {
+					filterCondition = field.FilterCondition
+				}
+
+				// 添加JOIN查询
+				data.JoinFields = append(data.JoinFields, struct {
+					RelatedFieldName string
+					JoinTable        string
+					JoinCondition    string
+					FilterCondition  string
+				}{
+					RelatedFieldName: field.FieldName,
+					JoinTable:        relatedTable,
+					JoinCondition:    joinCondition,
+					FilterCondition:  filterCondition,
+				})
+			}
 		}
 
 		// 如果是主键字段，跳过
@@ -306,7 +390,7 @@ func (c *{{.StructName}}Controller) Delete{{.StructName}}(ctx *gin.Context) {
 	}
 
 	// 确保目录存在
-	dir := filepath.Join(g.RootPath, "server/apps/admin/controllers")
+	dir := filepath.Join(g.RootPath, "server/apps", g.Config.PackageName, "controllers")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("创建目录失败: %w", err)
 	}
